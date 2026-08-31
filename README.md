@@ -150,6 +150,25 @@ That context can span Jira, Confluence, GitHub history, local documentation, and
 
 Requires **JDK 21** and **Maven 3.8+**.
 
+> ⚠ **JDK 21 is mandatory — not 22+.** Running on a newer JDK causes a SIGSEGV
+> crash in the JavaFX WebView native bridge (`get_method_id` in `libjvm.dylib` /
+> `libjfxwebkit.dylib`). If you see a "segmentation fault" or "Bad pointer
+> dereference" crash right after the terminal WebView loads, your `java` is too
+> new. Install JDK 21 and use it explicitly:
+>
+> ```bash
+> brew install openjdk@21                    # macOS
+> # or
+> brew install --cask liberica-jdk21-full    # macOS (bundles JavaFX)
+> ```
+>
+> Then run conload with:
+> ```bash
+> /path/to/jdk-21/bin/java -jar target/conload-1.0.0-mac.jar
+> ```
+>
+> Or set `JAVA_HOME` to JDK 21 before running `mvn` or `java`.
+
 ```bash
 git clone https://github.com/soft-am/conload.git
 cd conload
@@ -171,7 +190,9 @@ Each JAR is self-contained (includes JavaFX natives for the target OS) and runs 
 | **Windows** (x86_64) | [`conload-windows.jar`](https://github.com/soft-am/conload/releases/latest/download/conload-windows.jar) | `java -jar conload-windows.jar` |
 | **Linux** (x86_64) | [`conload-linux.jar`](https://github.com/soft-am/conload/releases/latest/download/conload-linux.jar) | `java -jar conload-linux.jar` |
 
-Requires **JDK 21** installed on your machine (the JARs do not bundle a JRE).
+Requires **JDK 21** installed on your machine (the JARs do not bundle a JRE). Do **not**
+use JDK 22+ — the JavaFX WebView native bridge will crash with a segmentation fault.
+Check your Java version with `java -version` before running.
 
 ### Native installers — Coming Soon
 
