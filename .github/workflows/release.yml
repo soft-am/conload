@@ -1,5 +1,6 @@
-# Builds native installers (.dmg / .exe / .deb / .rpm) on 3 OS runners and
-# publishes them as GitHub Release assets whenever a v* tag is pushed.
+# Builds native installers (.dmg / .exe / .deb / .rpm) AND per-OS
+# distribution JARs on 3 OS runners, then publishes them all as GitHub
+# Release assets whenever a v* tag is pushed.
 #
 # Usage:
 #   git tag v1.0.0
@@ -25,7 +26,7 @@ permissions:
 
 jobs:
   build-mac:
-    name: Build macOS .dmg
+    name: Build macOS .dmg + JAR
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,17 +38,26 @@ jobs:
           java-package: jdk+fx
       - name: Build installer
         run: ./build-mac.sh
-      - name: Rename to stable asset name
+      - name: Rename installer to stable asset name
         run: |
           mv target/installer/conload-*.dmg target/installer/conload.dmg
+      - name: Build distribution JAR
+        run: |
+          mvn -DskipTests package -Pmac -q
+          mv target/conload-1.0.0-mac.jar target/conload-mac.jar
       - uses: actions/upload-artifact@v4
         with:
-          name: conload-mac
+          name: conload-mac-dmg
           path: target/installer/conload.dmg
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: conload-mac-jar
+          path: target/conload-mac.jar
           if-no-files-found: error
 
   build-windows:
-    name: Build Windows .exe
+    name: Build Windows .exe + JAR
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -79,18 +89,28 @@ jobs:
             --java-options "--add-modules=javafx.controls,javafx.fxml,javafx.graphics,javafx.base" \
             --java-options "--add-reads=com.conload=ALL-UNNAMED" \
             --java-options "-Xmx512m"
-      - name: Rename to stable asset name
+      - name: Rename installer to stable asset name
         shell: bash
         run: |
           mv target/installer/conload-*.exe target/installer/conload.exe
+      - name: Build distribution JAR
+        shell: bash
+        run: |
+          mvn -DskipTests package -Pwindows -q
+          mv target/conload-1.0.0-windows.jar target/conload-windows.jar
       - uses: actions/upload-artifact@v4
         with:
-          name: conload-windows
+          name: conload-windows-exe
           path: target/installer/conload.exe
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: conload-windows-jar
+          path: target/conload-windows.jar
           if-no-files-found: error
 
   build-linux:
-    name: Build Linux .deb + .rpm
+    name: Build Linux .deb + .rpm + JARs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -107,10 +127,14 @@ jobs:
       # the first installers when the second type is built).
       - name: Build .deb and .rpm installers
         run: ./build-linux.sh deb rpm
-      - name: Rename to stable asset names
+      - name: Rename installers to stable asset names
         run: |
           mv target/installer/conload_*.deb target/installer/conload.deb
           mv target/installer/conload-*.rpm target/installer/conload.rpm
+      - name: Build distribution JAR
+        run: |
+          mvn -DskipTests package -Plinux -q
+          mv target/conload-1.0.0-linux.jar target/conload-linux.jar
       - uses: actions/upload-artifact@v4
         with:
           name: conload-linux-deb
@@ -120,6 +144,11 @@ jobs:
         with:
           name: conload-linux-rpm
           path: target/installer/conload.rpm
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: conload-linux-jar
+          path: target/conload-linux.jar
           if-no-files-found: error
 
   release:
@@ -131,9 +160,9 @@ jobs:
         with:
           path: assets
           merge-multiple: true
-      # Attaches the four version-less assets (conload.dmg/.exe/.deb/.rpm) to
-      # a GitHub Release on THIS repo. This repo is public (Apache 2.0), so
-      # downloads are available to everyone.
+      # Attaches all version-less assets (installers + JARs) to a GitHub
+      # Release. The JARs let users run conload with java -jar without
+      # building from source or dealing with unsigned installer warnings.
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:

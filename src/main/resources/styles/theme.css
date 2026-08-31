@@ -1019,7 +1019,7 @@
     -fx-border-width: 1;
 }
 .splash-title {
-    -fx-font-size: 28;
+    -fx-font-size: 28px;
     -fx-text-fill: -app-text;
     -fx-letter-spacing: 0.08em;
 }

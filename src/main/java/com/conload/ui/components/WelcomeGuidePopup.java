@@ -10,6 +10,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Separator;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
@@ -33,8 +34,8 @@ import java.util.List;
  */
 public class WelcomeGuidePopup {
 
-    private static final double WIDTH = 640;
-    private static final double HEIGHT = 560;
+    private static final double WIDTH = 520;
+    private static final double HEIGHT = 420;
 
     private final Stage stage;
     private final List<StepDef> steps;
@@ -183,9 +184,13 @@ public class WelcomeGuidePopup {
     private HBox buildHeader() {
         Label hero = new Label(Icons.SPARKLE + "  conload — Quick Start");
         hero.getStyleClass().addAll("title");
-        HBox header = new HBox(12, hero, UiFactory.hSpacer(), stepIndicatorLabel);
+        Button closeBtn = new Button(Icons.CLOSE);
+        closeBtn.getStyleClass().addAll("overlay-close", "icon");
+        closeBtn.setTooltip(new Tooltip("Close"));
+        closeBtn.setOnAction(e -> close());
+        HBox header = new HBox(12, hero, UiFactory.hSpacer(), stepIndicatorLabel, closeBtn);
         header.setAlignment(Pos.CENTER_LEFT);
-        header.setPadding(new Insets(14, 22, 10, 22));
+        header.setPadding(new Insets(12, 16, 8, 22));
         header.getStyleClass().add("panel-border-bottom");
         return header;
     }

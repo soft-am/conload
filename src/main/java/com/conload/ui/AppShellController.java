@@ -89,7 +89,7 @@ public class AppShellController extends ProjectWorkspaceController {
     private void buildSceneOverlay() {
         overlayCard = new VBox(0);
         overlayCard.setMaxWidth(820);
-        overlayCard.setMaxHeight(700);
+        overlayCard.setMaxHeight(560);
         overlayCard.getStyleClass().add("overlay-card");
         StackPane.setAlignment(overlayCard, Pos.CENTER);
 
@@ -311,8 +311,11 @@ public class AppShellController extends ProjectWorkspaceController {
         titleBar.getChildren().addAll(panelTitle, sp, closeBtn);
 
         javafx.scene.Node content = which.equals("CONFIG") ? cachedConfigPanel : cachedAboutPanel;
-        VBox.setVgrow(content, Priority.ALWAYS);
-        overlayCard.getChildren().addAll(titleBar, content);
+        // Wrap content in a scroll pane so the overlay stays compact and all
+        // fields remain reachable when the content is taller than the card.
+        ScrollPane scroll = UiFactory.scrollable((javafx.scene.layout.Region) content);
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+        overlayCard.getChildren().addAll(titleBar, scroll);
 
         UiFactory.show(sceneOverlay);
     }

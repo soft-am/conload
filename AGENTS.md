@@ -1,5 +1,22 @@
 # conload — Agent Notes
 
+## JDK requirement
+
+**JDK 21 is mandatory.** Running on a newer JDK (e.g. 22/23/26) causes a
+SIGSEGV crash in the JavaFX WebView native bridge. Install JDK 21:
+
+```bash
+brew install openjdk@21          # macOS (then configure IntelliJ Project SDK)
+```
+
+Or use Liberica Full JDK 21 (bundles JavaFX, recommended for local builds):
+```bash
+brew install --cask liberica-jdk21-full
+```
+
+In IntelliJ: File → Project Structure → SDKs → add JDK 21 → set as Project SDK.
+Run Configuration JRE must also be 21.
+
 ## Build / verification
 
 No test suite. The build is the typecheck + verification step:

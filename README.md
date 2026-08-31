@@ -146,9 +146,9 @@ That context can span Jira, Confluence, GitHub history, local documentation, and
 
 ## Download & install
 
-### Quick start — run from source (recommended for now)
+### Quick start — run from source
 
-Requires **JDK 21+** and **Maven 3.8+**.
+Requires **JDK 21** and **Maven 3.8+**.
 
 ```bash
 git clone https://github.com/soft-am/conload.git
@@ -160,25 +160,34 @@ That's it. The app launches, creates a `~/.conload/` folder for its state on fir
 and seeds the default CLI types, prompts, and workflow templates from the bundled
 defaults — nothing needs to be configured before first use.
 
-> See [Build from source](#run-from-source) for distribution JARs, native installers,
-> and per-OS build details.
+### Download a JAR (no build needed)
 
-### Pre-built installers
+Pre-built distribution JARs are available on the [Releases](https://github.com/soft-am/conload/releases/latest) page.
+Each JAR is self-contained (includes JavaFX natives for the target OS) and runs with `java -jar` — no Maven needed.
+
+| Platform | Download | Run command |
+|---|---|---|
+| **macOS** (Apple Silicon / Intel) | [`conload-mac.jar`](https://github.com/soft-am/conload/releases/latest/download/conload-mac.jar) | `java -jar conload-mac.jar` |
+| **Windows** (x86_64) | [`conload-windows.jar`](https://github.com/soft-am/conload/releases/latest/download/conload-windows.jar) | `java -jar conload-windows.jar` |
+| **Linux** (x86_64) | [`conload-linux.jar`](https://github.com/soft-am/conload/releases/latest/download/conload-linux.jar) | `java -jar conload-linux.jar` |
+
+Requires **JDK 21** installed on your machine (the JARs do not bundle a JRE).
+
+### Native installers — Coming Soon
 
 Native installers (`.dmg` / `.exe` / `.deb` / `.rpm`), each bundling its own JRE so no
-separate JDK install is needed on the target machine, are produced by CI on every `v*`
-tag push.
+separate JDK install is needed, are pending code-signing certificates (Apple Developer ID,
+Windows Authenticode) so they pass Gatekeeper / SmartScreen without warnings.
 
-| Platform | Download |
-|---|---|
-| **macOS** (Apple Silicon / Intel) | [`conload.dmg`](https://github.com/soft-am/conload/releases/latest/download/conload.dmg) |
-| **Windows** (x86_64) | [`conload.exe`](https://github.com/soft-am/conload/releases/latest/download/conload.exe) |
-| **Linux** (Debian/Ubuntu) | [`conload.deb`](https://github.com/soft-am/conload/releases/latest/download/conload.deb) |
-| **Linux** (Fedora/RHEL/SUSE) | [`conload.rpm`](https://github.com/soft-am/conload/releases/latest/download/conload.rpm) |
+| Platform | Installer | Status |
+|---|---|---|
+| **macOS** (Apple Silicon / Intel) | `conload.dmg` | Coming Soon |
+| **Windows** (x86_64) | `conload.exe` | Coming Soon |
+| **Linux** (Debian/Ubuntu) | `conload.deb` | Coming Soon |
+| **Linux** (Fedora/RHEL/SUSE) | `conload.rpm` | Coming Soon |
 
-> **macOS note:** the `.dmg` is not code-signed (no Apple Developer ID yet). On
-> first launch, right-click the app → **Open** → confirm, to dismiss Gatekeeper's
-> "unidentified developer" warning.
+> See [Build from source](#run-from-source) for building JARs, native installers,
+> and per-OS build details.
 
 [All releases](https://github.com/soft-am/conload/releases) · [Latest release](https://github.com/soft-am/conload/releases/latest)
 
@@ -625,11 +634,33 @@ from source or building the installers yourself.
 
 ### Run from source
 
-Requires **JDK 21+** and **Maven 3.8+**.
+Requires **JDK 21** (exactly — not 22+, see note below) and **Maven 3.8+**.
 
 ```bash
 mvn javafx:run
 ```
+
+### Run from IntelliJ IDEA
+
+1. Open the project in IntelliJ IDEA.
+2. Install **JDK 21** if you don't have it:
+
+   ```bash
+   brew install --cask liberica-jdk21-full   # macOS — bundles JavaFX
+   # or
+   brew install openjdk@21
+   ```
+
+3. **File → Project Structure → SDKs** → click `+` → select the JDK 21 installation.
+4. **File → Project Structure → Project** → set **Project SDK** to JDK 21.
+5. Open the **Run Configuration** dropdown (top bar) → Edit Configurations → select **Launcher** → set **JRE** to JDK 21.
+6. Run `Launcher` from IntelliJ.
+
+> ⚠ **JDK 21 is mandatory.** Running on a newer JDK (22/23/25/26) causes a
+> SIGSEGV crash in the JavaFX WebView native bridge. The classpath contains
+> JavaFX 21 native JARs; the JVM must match (21.x). If you see a crash log
+> mentioning `get_method_id` or `libjvm.dylib`, your IntelliJ Run Configuration
+> is using the wrong JDK — switch the JRE to 21.
 
 ### Dev JAR (host-OS only)
 
