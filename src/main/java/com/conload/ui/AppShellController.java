@@ -3,6 +3,7 @@ package com.conload.ui;
 import com.conload.ui.Icons;
 import com.conload.ui.components.UiFactory;
 import com.conload.ui.components.AboutPanel;
+import com.conload.ui.components.WelcomeGuidePopup;
 import com.conload.ui.projects.ProjectFilesPane;
 import com.conload.ui.projects.ProjectWorkspaceController;
 import com.conload.ui.prompttemplate.PromptTemplatePanel;
@@ -32,6 +33,8 @@ import java.util.List;
 public class AppShellController extends ProjectWorkspaceController {
 
     private final FocusModeController focusModeController;
+    /** Red banner shown at the top of the app while config is incomplete. */
+    private HBox configBanner;
 
     // ── Speech-to-text (Vosk) ──────────────────────────────────────────────────
     // (speechService moved to MainControllerSupport — shared across terminal panes)
@@ -39,6 +42,25 @@ public class AppShellController extends ProjectWorkspaceController {
     public AppShellController(Stage stage, ConfigService configService) {
         super(stage, configService);
         focusModeController = new FocusModeController(stage);
+    }
+
+    /**
+     * Show the 5-step welcome / onboarding guide when the user has no projects
+     * or an incomplete config (missing any mandatory field / folder). Uses the
+     * same {@link #isConfigFullySet()} check as the top banner so there is one
+     * source of truth. Re-checked on every launch; auto-stops once setup is
+     * done. Called from {@link com.conload.App#start} after the primary stage is shown.
+     */
+    public void maybeShowWelcomeGuide() {
+        boolean noProjects = projectService.loadProjects().isEmpty();
+        if (!(noProjects || !isConfigFullySet())) return;
+        new WelcomeGuidePopup(stage, this::showSettingsPanel, this::switchToProjects,
+                this::switchToPrompts, () -> {}).show();
+    }
+
+    /** Open the Settings/Config overlay panel (used by the welcome guide). */
+    private void showSettingsPanel() {
+        showPanel("CONFIG");
     }
 
     @Override
@@ -92,6 +114,7 @@ public class AppShellController extends ProjectWorkspaceController {
         centerStack = new StackPane(dashboardCenter);
 
         HBox topBar = buildTopBar();
+        configBanner = buildConfigBanner();
         projectTabsBar = new HBox(8);
         projectTabsBar.setAlignment(Pos.CENTER_LEFT);
         projectTabsBar.setPadding(new Insets(6, 12, 6, 12));
@@ -109,9 +132,46 @@ public class AppShellController extends ProjectWorkspaceController {
         SplitPane.setResizableWithParent(leftPaneHost, false);
         Theme.classes(splitPane, Theme.CL_BG_APP);
 
-        VBox dashboard = new VBox(topBar, projectTabsBar, splitPane);
+        VBox dashboard = new VBox(topBar, configBanner, projectTabsBar, splitPane);
         VBox.setVgrow(splitPane, Priority.ALWAYS);
         return dashboard;
+    }
+
+    /** Builds (but does not show) the red "config incomplete" banner.
+     *  Visibility is driven by {@link #refreshConfigBanner()}. */
+    private HBox buildConfigBanner() {
+        Label icon = new Label(Icons.WARNING);
+        icon.getStyleClass().add("config-banner-icon");
+        Label text = new Label("Configuration incomplete — not all required settings (*) are set. "
+                + "Search, download, and workflows are disabled until setup is finished.");
+        text.getStyleClass().add("config-banner-text");
+        text.setWrapText(true);
+        HBox.setHgrow(text, Priority.ALWAYS);
+        Button openBtn = UiFactory.actionButton("Open Settings");
+        openBtn.setOnAction(e -> showPanel("CONFIG"));
+        HBox banner = new HBox(10, icon, text, openBtn);
+        banner.getStyleClass().add("config-banner");
+        banner.setAlignment(Pos.CENTER_LEFT);
+        UiFactory.hide(banner);
+        return banner;
+    }
+
+    /** True when every mandatory config field is present: Atlassian email/token,
+     *  root URL, GitHub token, default export folder, and full Confluence folder. */
+    private boolean isConfigFullySet() {
+        AppConfig cfg = configService.loadConfig();
+        if (!cfg.isValid()) return false;
+        if (cfg.getBaseUrl().isBlank()) return false;
+        if (cfg.getGithubToken().isBlank()) return false;
+        if (cfg.getDefaultExportFolder().isBlank()) return false;
+        return !new com.conload.workflow.WorkflowSettingsService().getFullConfluenceFolder().isBlank();
+    }
+
+    /** Show or hide the red top banner based on the current config state.
+     *  Called at startup (after autoLoadConfig) and after Save. */
+    private void refreshConfigBanner() {
+        if (configBanner == null) return;
+        UiFactory.setVisible(configBanner, !isConfigFullySet());
     }
 
     private VBox buildTerminalSection() {
@@ -148,6 +208,7 @@ public class AppShellController extends ProjectWorkspaceController {
         stage.setX(screen.getMinX() + (screen.getWidth() - sceneW) / 2);
         stage.setY(screen.getMinY() + screen.getHeight() * 0.015);
         autoLoadConfig();
+        refreshConfigBanner();
         pidRegistry.killAllAliveAndClear();
         List<OpenTabsService.OpenTab> saved = openTabsService.load();
         if (!saved.isEmpty()) restoreOpenTabs();
@@ -342,7 +403,10 @@ public class AppShellController extends ProjectWorkspaceController {
         VBox cred = new VBox(16);
         cred.setPadding(new Insets(20, 24, 20, 24));
         cred.getStyleClass().add("panel");
-        cred.getChildren().addAll(buildCredentialFields(), buildUrlSection(),
+        Label reqHint = new Label("Fields marked with * are required — search and workflows are disabled until they are filled.");
+        reqHint.getStyleClass().addAll("hint", "small");
+        reqHint.setWrapText(true);
+        cred.getChildren().addAll(reqHint, buildCredentialFields(), buildUrlSection(),
                 buildGithubSection(), buildConfluenceFolderSection(),
                 buildExportFolderSection(), buildShellSection(),
                 buildCliTypesSection());
@@ -366,13 +430,13 @@ public class AppShellController extends ProjectWorkspaceController {
         fieldsRow.setAlignment(Pos.TOP_LEFT);
 
         VBox userBox = new VBox(6);
-        userBox.getChildren().add(UiFactory.fieldLabel("EMAIL / USERNAME (Atlassian & Github)"));
+        userBox.getChildren().add(UiFactory.fieldLabel("EMAIL / USERNAME (Atlassian & Github)", true));
         usernameField = UiFactory.darkTextField("user@example.com");
         userBox.getChildren().add(usernameField);
         HBox.setHgrow(userBox, Priority.ALWAYS);
 
         VBox tokenBox = new VBox(6);
-        tokenBox.getChildren().add(UiFactory.fieldLabel("ATLASSIAN API TOKEN"));
+        tokenBox.getChildren().add(UiFactory.fieldLabel("ATLASSIAN API TOKEN", true));
         tokenField = new PasswordField();
         UiFactory.styleInput(tokenField, "Paste Atlassian API token here");
         tokenBox.getChildren().add(tokenField);
@@ -384,7 +448,7 @@ public class AppShellController extends ProjectWorkspaceController {
 
     private VBox buildUrlSection() {
         VBox urlBox = new VBox(6);
-        urlBox.getChildren().add(UiFactory.fieldLabel("ATLASSIAN ROOT URL (CONFLUENCE & JIRA)"));
+        urlBox.getChildren().add(UiFactory.fieldLabel("ATLASSIAN ROOT URL (CONFLUENCE & JIRA)", true));
         baseUrlConfigField = UiFactory.darkTextField("https://yoursite.atlassian.net");
         urlBox.getChildren().add(baseUrlConfigField);
         return urlBox;
@@ -392,7 +456,7 @@ public class AppShellController extends ProjectWorkspaceController {
 
     private VBox buildGithubSection() {
         VBox ghBox = new VBox(6);
-        ghBox.getChildren().add(UiFactory.fieldLabel("GITHUB ROOT URL (REST API BASE)"));
+        ghBox.getChildren().add(UiFactory.fieldLabel("GITHUB ROOT URL (REST API BASE)", false));
         githubApiUrlField = UiFactory.darkTextField("https://api.github.com");
         githubApiUrlField.setPromptText("https://api.github.com  (or GitHub Enterprise host)");
         ghBox.getChildren().add(githubApiUrlField);
@@ -400,7 +464,7 @@ public class AppShellController extends ProjectWorkspaceController {
         ghUrlHint.getStyleClass().addAll("hint", "small");
         ghUrlHint.setWrapText(true);
         ghBox.getChildren().add(ghUrlHint);
-        ghBox.getChildren().add(UiFactory.fieldLabel("GITHUB PERSONAL ACCESS TOKEN"));
+        ghBox.getChildren().add(UiFactory.fieldLabel("GITHUB PERSONAL ACCESS TOKEN", true));
         githubTokenField = new PasswordField();
         UiFactory.styleInput(githubTokenField, "ghp_xxxxxxxxxxxxxxxxxxxx");
         ghBox.getChildren().add(githubTokenField);
@@ -409,7 +473,7 @@ public class AppShellController extends ProjectWorkspaceController {
 
     private VBox buildConfluenceFolderSection() {
         VBox box = new VBox(6);
-        box.getChildren().add(UiFactory.fieldLabel("FULL CONFLUENCE FOLDER (GLOBAL DEFAULT)"));
+        box.getChildren().add(UiFactory.fieldLabel("FULL CONFLUENCE FOLDER (GLOBAL DEFAULT)", true));
         fullConfluenceFolderField = UiFactory.darkTextField("Local folder with full Confluence data");
         HBox.setHgrow(fullConfluenceFolderField, Priority.ALWAYS);
         Button browseBtn = UiFactory.actionButton("Browse");
@@ -437,7 +501,7 @@ public class AppShellController extends ProjectWorkspaceController {
 
     private VBox buildExportFolderSection() {
         VBox exportBox = new VBox(6);
-        exportBox.getChildren().add(UiFactory.fieldLabel("DEFAULT EXPORT FOLDER"));
+        exportBox.getChildren().add(UiFactory.fieldLabel("DEFAULT EXPORT FOLDER", true));
         defaultExportFolderField = UiFactory.darkTextField(System.getProperty("user.home") + "/conload-exports");
         Button exportBrowseBtn = UiFactory.actionButton("Browse");
         exportBrowseBtn.setPrefWidth(90);
@@ -460,7 +524,7 @@ public class AppShellController extends ProjectWorkspaceController {
 
     private VBox buildShellSection() {
         VBox shellBox = new VBox(6);
-        shellBox.getChildren().add(UiFactory.fieldLabel("TERMINAL SHELL"));
+        shellBox.getChildren().add(UiFactory.fieldLabel("TERMINAL SHELL", false));
         shellField = UiFactory.darkTextField("zsh / bash / powershell / pwsh");
         shellBox.getChildren().add(shellField);
         Label shellHint = new Label("The shell spawned by the embedded terminal. Blank = prompt for a detected one on first open.");
@@ -512,6 +576,7 @@ public class AppShellController extends ProjectWorkspaceController {
         } catch (IOException e) {
             setConfigStatus("✗  Failed: " + e.getMessage(), "error");
         }
+        refreshConfigBanner();
     }
 
 

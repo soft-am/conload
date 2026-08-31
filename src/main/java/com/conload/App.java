@@ -27,6 +27,7 @@ public class App extends Application {
         primaryStage.setMinWidth(1100);
         primaryStage.setMinHeight(500);
         primaryStage.show();
+        controller.maybeShowWelcomeGuide();
         Runnable shutdown = controller::shutdownAll;
         primaryStage.setOnCloseRequest(e -> shutdown.run());
         Runtime.getRuntime().addShutdownHook(new Thread(shutdown, "shutdown-kill"));

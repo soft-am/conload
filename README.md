@@ -4,6 +4,17 @@
 
 `conload` combines three things a developer needs to use an AI agent effectively:
 
+---
+* **🕸️ Recursive Cross-Context Engine:** Don't feed your agent raw snippets. Input a single Jira key, PR URL, or Confluence link — `conload` recursively resolves linked tickets, parent epics, Confluence spec trees, and GitHub commits into a unified, deduplicated Markdown knowledge graph (`cross_context_hierarchy.md`).
+* **💻 True Multi-Terminal Workspace:** Built-in **xterm.js + Pty4J** terminal engine (the same shell setup as VS Code). Run `opencode`, `aider`, `claude-code`, or `copilot` inside isolated per-project tabs with persistent sessions.
+* **🌳 Native Git Worktree Management:** Switch context without dirty `git stash` hacks. Spin up parallel Git worktrees directly in the sidebar — each worktree automatically gets its own working directory, terminal state, and agent session.
+* **🔒 100% Local & Privacy-First:** No third-party LLM APIs are called by the platform. Downloading docs, parsing ticket ADF graphs, and offline speech-to-text dictation (via Vosk) all execute entirely on your machine.
+* **⚡ One-Click Workflows:** Auto-generate refinement documents, holistic code reviews (diff + spec + ticket), or reverse-engineering maps using built-in parameterized prompt templates (`${variable}`).
+
+
+## ⚡ Key Highlights at a Glance
+
+
 1. **Context loading** — download Confluence pages, Jira issues, and GitHub PRs/commits as clean Markdown.
 2. **A real terminal** — run `opencode`, GitHub Copilot, `aider`, `claude-code`, or *any* CLI agent in an embedded
    xterm.js terminal, one per project.

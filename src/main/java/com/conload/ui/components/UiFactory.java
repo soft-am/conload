@@ -81,6 +81,20 @@ public final class UiFactory {
         return l;
     }
 
+    /** Field label overload that marks a mandatory field with a red asterisk
+     *  (graphic placed to the right of the text). Pass {@code required=false}
+     *  for optional fields. */
+    public static Label fieldLabel(String text, boolean required) {
+        Label l = fieldLabel(text);
+        if (required) {
+            Label star = new Label("*");
+            star.getStyleClass().add("required-marker");
+            l.setGraphic(star);
+            l.setContentDisplay(ContentDisplay.RIGHT);
+        }
+        return l;
+    }
+
     public static HBox row(Node... nodes) {
         HBox r = new HBox(4, nodes);
         r.setAlignment(Pos.CENTER_LEFT);

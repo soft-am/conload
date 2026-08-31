@@ -978,3 +978,32 @@
 .popup-window-root .app-button.recording { -fx-background-color: -c-danger-soft; }
 .popup-window-root .app-button.recording:hover { -fx-background-color: -c-danger-hover; }
 .popup-window-root .icon-button { -fx-padding: 4 8; }
+
+/* ── Welcome / onboarding guide popup ──────────────────────────────────── */
+.welcome-guide-root .title { -fx-font-size: 18; }
+.welcome-step-dot { -fx-text-fill: -app-muted; -fx-font-size: 13; }
+.welcome-step-dot-active { -fx-text-fill: -app-success; -fx-font-size: 15; }
+.welcome-step-dot-active:hover { -fx-text-fill: derive(-app-success, 15%); }
+
+/* ── Required-field marker (red asterisk next to mandatory config labels) ── */
+.required-marker { -fx-text-fill: -app-error; -fx-font-weight: bold; }
+
+/* ── Incomplete-config banner (shown at top of app until setup is done) ── */
+.config-banner {
+    -fx-background-color: -app-error;
+    -fx-padding: 7 18 7 18;
+    -fx-spacing: 10;
+    -fx-alignment: CENTER_LEFT;
+}
+.config-banner .label { -fx-text-fill: #FFFFFF; }
+.config-banner .config-banner-icon { -fx-font-size: 14; }
+.config-banner .app-button {
+    -fx-background-color: transparent;
+    -fx-border-color: #FFFFFF;
+    -fx-border-width: 1;
+    -fx-text-fill: #FFFFFF;
+}
+.config-banner .app-button:hover {
+    -fx-background-color: rgba(255,255,255,0.15);
+}
+.config-banner .icon-button { -fx-text-fill: #FFFFFF; }
