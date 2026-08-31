@@ -111,10 +111,9 @@ jobs:
         with:
           path: assets
           merge-multiple: true
-      # Attaches the four version-less assets (conload.dmg/.exe/.deb/.rpm) to a
-      # GitHub Release on THIS repo. If the repo is PRIVATE, only collaborators
-      # can download the assets — for public distribution, either make the repo
-      # public or repoint this step at a separate public releases repo.
+      # Attaches the four version-less assets (conload.dmg/.exe/.deb/.rpm) to
+      # a GitHub Release on THIS repo. This repo is public (Apache 2.0), so
+      # downloads are available to everyone.
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:

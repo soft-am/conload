@@ -119,8 +119,7 @@ public final class AboutPanel {
         footer.setPadding(new Insets(12, 40, 12, 40));
         footer.getStyleClass().add("panel-border-top");
         Label footerLbl = new Label(
-                "CONLOAD   ·  v1.0  ·  "
-                        + " ·  Internal tool");
+                "CONLOAD   ·  v1.0  ·  Apache 2.0 License  ·  github.com/soft-am/conload");
         footerLbl.getStyleClass().addAll("hint");
         footer.getChildren().add(footerLbl);
         return footer;

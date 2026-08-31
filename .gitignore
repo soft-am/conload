@@ -4,6 +4,13 @@ target/
 !**/src/test/**/target/
 .kotlin
 
+### Maven / build byproducts ###
+dependency-reduced-pom.xml
+
+### JVM crash dumps ###
+hs_err_pid*.log
+replay_pid*.log
+
 ### IntelliJ IDEA ###
 .idea/modules.xml
 .idea/jarRepositories.xml

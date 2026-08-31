@@ -67,13 +67,6 @@ bundling its own JRE so no separate JDK install is needed on the target machine.
 | **Linux** (Debian/Ubuntu) | [`conload.deb`](https://github.com/soft-am/conload/releases/latest/download/conload.deb) |
 | **Linux** (Fedora/RHEL/SUSE) | [`conload.rpm`](https://github.com/soft-am/conload/releases/latest/download/conload.rpm) |
 
-<!-- TODO(distribution): release assets are hosted on the (private) source repo,
-     so the links above are collaborator-only. When you're ready to distribute
-     publicly, repoint them at a public channel (separate public releases repo,
-     GitHub Packages, or external CDN). The CI workflow already builds and
-     attaches the four version-less asset names shown above to each tag's
-     Release. -->
-
 On first launch the app creates a `~/.conload/` folder for its state (config, credentials, sessions) and seeds the
 default CLI types, prompts, and workflow templates from the bundled defaults — nothing needs to be configured before
 first use.

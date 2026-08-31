@@ -23,11 +23,9 @@ Native installers (.dmg / .exe / .deb / .rpm) are built by
 `jpackage` itself is invoked by the build scripts (`build-mac.sh`,
 `build-linux.sh`, `build-windows.bat`) which CI calls. To publish a release:
 `git tag v1.0.0 && git push origin v1.0.0`. Assets are renamed to stable
-version-less names (`conload.dmg` etc.) so README download links (added once a
-public distribution channel is set up) survive version bumps. NOTE: this source
-repo is private — release assets hosted here are only downloadable by
-collaborators; public distribution requires a public channel (separate public
-releases repo or external CDN).
+version-less names (`conload.dmg` etc.) so README download links survive
+version bumps. Release assets are hosted on the public `soft-am/conload`
+GitHub repo and attached to each tag's Release by the CI workflow.
 
 Run `mvn -DskipTests package` after every change. BUILD SUCCESS = green.
 
@@ -43,12 +41,11 @@ Run `mvn -DskipTests package` after every change. BUILD SUCCESS = green.
   `App.main`) creates `~/.conload/` and one-time-migrates any legacy
   `src/<file>` state into it. The legacy `src/*.json` paths must NOT be used in
   new code — always go through `AppPaths`.
-- `src/main/resources/archetype-resources/` is a stray Maven archetype scaffold — NOT app code.
 
 ## Conventions
 
 - No tests; manual smoke-test via `mvn javafx:run` for UI-touching changes.
-- `dependency-reduced-pom.xml` is a generated shade-plugin byproduct — do not edit.
+- `dependency-reduced-pom.xml` is a generated shade-plugin byproduct — git-ignored; do not edit or commit.
 - Root Python scripts (`check_fonts.py`, `find_lines.py`, `fix_fonts.py`, `fix_sizes.py`, `write_files.py`)
   are one-off maintenance utilities, not part of the build.
 - Build is Java 21 + JavaFX 21.0.2 + Jackson 2.17 + pty4j 0.12.5 + JNA 5.9 + vosk 0.3.45.

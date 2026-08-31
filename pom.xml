@@ -8,6 +8,28 @@
     <version>1.0.0</version>
     <packaging>jar</packaging>
     <name>Copilot Context Loader</name>
+    <description>A local context workspace for CLI-based AI agents. Download Confluence, Jira, and GitHub content as Markdown and run any CLI agent in an embedded terminal.</description>
+    <url>https://github.com/soft-am/conload</url>
+    <inceptionYear>2024</inceptionYear>
+
+    <organization>
+        <name>Soft Am</name>
+        <url>https://soft-am.de</url>
+    </organization>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <scm>
+        <connection>scm:git:https://github.com/soft-am/conload.git</connection>
+        <developerConnection>scm:git:git@github.com:soft-am/conload.git</developerConnection>
+        <url>https://github.com/soft-am/conload</url>
+    </scm>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
