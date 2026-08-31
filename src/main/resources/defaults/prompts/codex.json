@@ -1,0 +1,7 @@
+{
+  "id": "default-codex-cli",
+  "name": "Codex CLI",
+  "command": "codex",
+  "parameters": [],
+  "template": false
+}

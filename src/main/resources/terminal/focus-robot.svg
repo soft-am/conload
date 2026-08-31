@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40" fill="none" aria-label="Animated robot framed by rotating-color corner brackets">
+  <title>Focus-mode robot inside animated brand-logo border</title>
+  <desc>Single composition: the typing robot (from robot-indicator.svg) centered inside four corner brackets whose colors rotate clockwise through the project palette (mint, amber, coral, sky).</desc>
+
+  <!-- Robot styles (kept identical to robot-indicator.svg) -->
+  <defs>
+    <style>
+      .line { stroke: #111111; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+      .fill { fill: #FFFFFF; stroke: #111111; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+      .panel { fill: #111111; }
+      .light { fill: #FFFFFF; }
+    </style>
+  </defs>
+
+  <!-- ── Robot body, translated to center (4,4) in the 40×40 box ────────── -->
+  <!-- The inner character block (head+body+laptop+hands+motion-lines) is
+       injected at runtime by AppShellController.buildFocusOverlay() from
+       one of the four character SVGs (robot/cat/alien/yoda) via
+       RobotIndicator.bodyXml(chr). It is placed under translate(4,4) so the
+       32×32-coordinate character sits centered inside the 40×40 viewBox,
+       leaving a 4px margin for the animated corner brackets. -->
+  <g transform="translate(4,4)">
+{{inner}}
+  </g>
+
+  <!-- ── Corner brackets (animated brand-logo border) ───────────────────── -->
+  <!-- Colors rotate clockwise: mint→TR, amber→BR, coral→BL, sky→TL, then
+       mint continues around. Each bracket steps through the 4 palette colors
+       (mint #A7F3D0, amber #FBBF24, coral #F87171, sky #60A5FA); the starting
+       offset differs per corner so the colors appear to travel clockwise.
+
+       TL starts mint:  mint, sky, coral, amber
+       TR starts amber: amber, mint, sky, coral
+       BR starts coral: coral, amber, mint, sky
+       BL starts sky:   sky, coral, amber, mint
+
+       dur=2800ms = 4×700ms per color step; discrete calcMode snaps between
+       colors instead of interpolating, giving a crisp stepped tick. -->
+  <g fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Top-left -->
+    <path d="M1 6 V1 H6">
+      <animate attributeName="stroke"
+               values="#A7F3D0;#60A5FA;#F87171;#FBBF24;#A7F3D0"
+               keyTimes="0;0.25;0.5;0.75;1"
+               calcMode="discrete"
+               dur="2800ms" repeatCount="indefinite"/>
+    </path>
+    <!-- Top-right -->
+    <path d="M34 1 H39 V6">
+      <animate attributeName="stroke"
+               values="#FBBF24;#A7F3D0;#60A5FA;#F87171;#FBBF24"
+               keyTimes="0;0.25;0.5;0.75;1"
+               calcMode="discrete"
+               dur="2800ms" repeatCount="indefinite"/>
+    </path>
+    <!-- Bottom-right -->
+    <path d="M34 39 H39 V34">
+      <animate attributeName="stroke"
+               values="#F87171;#FBBF24;#A7F3D0;#60A5FA;#F87171"
+               keyTimes="0;0.25;0.5;0.75;1"
+               calcMode="discrete"
+               dur="2800ms" repeatCount="indefinite"/>
+    </path>
+    <!-- Bottom-left -->
+    <path d="M1 34 V39 H6">
+      <animate attributeName="stroke"
+               values="#60A5FA;#F87171;#FBBF24;#A7F3D0;#60A5FA"
+               keyTimes="0;0.25;0.5;0.75;1"
+               calcMode="discrete"
+               dur="2800ms" repeatCount="indefinite"/>
+    </path>
+  </g>
+</svg>

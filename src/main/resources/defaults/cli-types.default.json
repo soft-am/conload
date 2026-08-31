@@ -1,0 +1,23 @@
+[
+  {
+    "label": "OpenCode",
+    "detectText": "opencode",
+    "listCommand": "opencode session list --format json",
+    "resumeCommand": "opencode --session {id}",
+    "exportCommand": "opencode export {id}"
+  },
+  {
+    "label": "GitHub Copilot",
+    "detectText": "copilot",
+    "listCommand": "",
+    "resumeCommand": "",
+    "exportCommand": ""
+  },
+  {
+    "label": "Codex CLI",
+    "detectText": "codex",
+    "listCommand": "",
+    "resumeCommand": "",
+    "exportCommand": ""
+  }
+]

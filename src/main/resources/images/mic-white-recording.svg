@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="24" height="24" viewBox="0 0 24 24"
+     fill="none">
+  <style>
+    @keyframes micPulse {
+      0%, 100% { transform: scale(1);    opacity: 1.0; }
+      50%      { transform: scale(1.14); opacity: 0.75; }
+    }
+    .mic-group {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: micPulse 1.0s ease-in-out infinite;
+    }
+  </style>
+  <!-- Transparent rounded background -->
+  <rect x="0" y="0" width="24" height="24" rx="5"
+        fill="none"/>
+  <!-- Microphone (white) — pulsed as a group -->
+  <g class="mic-group">
+    <!-- Capsule body -->
+    <rect x="9" y="2" width="6" height="11" rx="3"
+          fill="#FFFFFF"/>
+    <!-- Curved cradle -->
+    <path d="M5 11V12a7 7 0 0 0 14 0V11"
+          stroke="#FFFFFF" stroke-width="2"
+          stroke-linecap="round" fill="none"/>
+    <!-- Stem -->
+    <path d="M12 19V22"
+          stroke="#FFFFFF" stroke-width="2"
+          stroke-linecap="round"/>
+    <!-- Base -->
+    <path d="M8 22h8"
+          stroke="#FFFFFF" stroke-width="2"
+          stroke-linecap="round"/>
+  </g>
+</svg>

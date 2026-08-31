@@ -1,0 +1,122 @@
+# Builds native installers (.dmg / .exe / .deb / .rpm) on 3 OS runners and
+# publishes them as GitHub Release assets whenever a v* tag is pushed.
+#
+# Usage:
+#   git tag v1.0.0
+#   git push origin v1.0.0
+#
+# Artifacts are renamed to stable, version-less filenames so the README can
+# link releases/latest/download/conload.dmg etc. without breaking on bumps.
+#
+# Requirements satisfied by the runners:
+#   - Liberica JDK 21 (jdk+fx) — bundles JavaFX modules so jpackage
+#     --add-modules=javafx.* works without a separate JavaFX install.
+#   - Maven is preinstalled on GitHub-hosted runners.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-mac:
+    name: Build macOS .dmg
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Liberica JDK 21 (JavaFX)
+        uses: actions/setup-java@v4
+        with:
+          distribution: liberica
+          java-version: '21'
+          java-package: jdk+fx
+      - name: Build installer
+        run: ./build-mac.sh
+      - name: Rename to stable asset name
+        run: |
+          mv target/installer/conload-*.dmg target/installer/conload.dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: conload-mac
+          path: target/installer/conload.dmg
+          if-no-files-found: error
+
+  build-windows:
+    name: Build Windows .exe
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Liberica JDK 21 (JavaFX)
+        uses: actions/setup-java@v4
+        with:
+          distribution: liberica
+          java-version: '21'
+          java-package: jdk+fx
+      - name: Build installer
+        shell: cmd
+        run: build-windows.bat
+      - name: Rename to stable asset name
+        shell: bash
+        run: |
+          mv target/installer/conload-*.exe target/installer/conload.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: conload-windows
+          path: target/installer/conload.exe
+          if-no-files-found: error
+
+  build-linux:
+    name: Build Linux .deb + .rpm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Liberica JDK 21 (JavaFX)
+        uses: actions/setup-java@v4
+        with:
+          distribution: liberica
+          java-version: '21'
+          java-package: jdk+fx
+      - name: Install rpm toolchain (for .rpm type)
+        run: sudo apt-get update && sudo apt-get install -y rpm
+      - name: Build .deb installer
+        run: ./build-linux.sh deb
+      - name: Build .rpm installer
+        run: ./build-linux.sh rpm
+      - name: Rename to stable asset names
+        run: |
+          mv target/installer/conload_*.deb target/installer/conload.deb
+          mv target/installer/conload-*.rpm target/installer/conload.rpm
+      - uses: actions/upload-artifact@v4
+        with:
+          name: conload-linux-deb
+          path: target/installer/conload.deb
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: conload-linux-rpm
+          path: target/installer/conload.rpm
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: [build-mac, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: assets
+          merge-multiple: true
+      # Attaches the four version-less assets (conload.dmg/.exe/.deb/.rpm) to a
+      # GitHub Release on THIS repo. If the repo is PRIVATE, only collaborators
+      # can download the assets — for public distribution, either make the repo
+      # public or repoint this step at a separate public releases repo.
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: assets/*

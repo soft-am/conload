@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none" aria-label="Animated cat typing icon">
+  <title>Animated cat typing at laptop, optimized for 32x32</title>
+  <desc>Compact animated cat icon: wide oval skull, large triangular ears, vertical-slit blinking eyes, dark muzzle with whiskers, nose and split mouth. Only the body+laptop+hands+motion-lines are shared with robot-indicator.svg.</desc>
+  <defs>
+    <style>
+      .line { stroke: #111111; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+      .fill { fill: #FFFFFF; stroke: #111111; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+      .panel { fill: #111111; }
+      .light { fill: #FFFFFF; }
+    </style>
+  </defs>
+
+  <!-- ── Cat head: wide oval skull (NOT the robot's rounded rect) ───────── -->
+  <ellipse class="fill" cx="13.4" cy="11.0" rx="8.7" ry="7.0"/>
+
+  <!-- Large triangular ears with inner accent (no antenna — cats have no antenna) -->
+  <path class="fill" d="M7.0 6.2 L3.6 0.8 L1.3 7.6 Q2.0 8.2 7.0 6.2 Z"/>
+  <path class="line" d="M6.0 6.0 L4.0 2.4 L2.3 7.0" fill="none"/>
+  <path class="fill" d="M19.8 6.2 L23.2 0.8 L25.5 7.6 Q24.8 8.2 19.8 6.2 Z"/>
+  <path class="line" d="M20.8 6.0 L22.8 2.4 L24.5 7.0" fill="none"/>
+
+  <!-- Dark muzzle patch (cat-specific, not the robot's full screen bezel) -->
+  <ellipse class="panel" cx="13.4" cy="13.2" rx="3.5" ry="2.8"/>
+
+  <!-- Cat eyes: dark vertical-slit pupils, blinkable (no screen panel behind them) -->
+  <ellipse class="panel" cx="10.2" cy="9.6" rx="0.62" ry="1.95">
+    <animate attributeName="ry" values="1.95;1.95;0.15;1.95;1.95" dur="2.0s" repeatCount="indefinite"/>
+  </ellipse>
+  <ellipse class="panel" cx="16.6" cy="9.6" rx="0.62" ry="1.95">
+    <animate attributeName="ry" values="1.95;1.95;0.15;1.95;1.95" dur="2.0s" repeatCount="indefinite"/>
+  </ellipse>
+
+  <!-- Whiskers (three each side) -->
+  <g stroke="#FFFFFF" stroke-width="0.7" stroke-linecap="round" fill="none">
+    <path d="M10.0 12.9 L6.0 12.0"/>
+    <path d="M10.2 13.8 L6.0 14.0"/>
+    <path d="M10.0 14.6 L6.2 15.8"/>
+    <path d="M16.8 12.9 L20.8 12.0"/>
+    <path d="M16.6 13.8 L20.8 14.0"/>
+    <path d="M16.8 14.6 L20.6 15.8"/>
+  </g>
+
+  <!-- Nose + split w-mouth -->
+  <path class="light" d="M12.7 12.7 L14.1 12.7 L13.4 13.5 Z"/>
+  <path d="M13.4 13.5 Q11.9 14.7 10.7 13.6" stroke="#FFFFFF" stroke-width="0.9" stroke-linecap="round" fill="none"/>
+  <path d="M13.4 13.5 Q14.9 14.7 16.1 13.6" stroke="#FFFFFF" stroke-width="0.9" stroke-linecap="round" fill="none"/>
+
+  <!-- ── Body + laptop + hands + motion-lines (identical to robot-indicator.svg) ── -->
+  <!-- Body -->
+  <path class="fill" d="M7.5 18.2 H17.4 C18.0 18.2 18.5 18.7 18.3 19.3 L17.4 22.4 H8.2 C6.9 22.4 5.8 21.3 5.8 20.0 V19.9 C5.8 18.9 6.5 18.2 7.5 18.2 Z"/>
+
+  <!-- Laptop -->
+  <path class="fill" d="M17.8 18.0 H26.9 C27.9 18.0 28.6 19.0 28.3 19.9 L26.6 25.0 H16.4 Z"/>
+  <circle class="panel" cx="22.1" cy="21.5" r="1.0"/>
+  <path class="fill" d="M10.6 25.0 H26.8 C27.5 25.0 27.9 25.9 27.3 26.5 H9.6 C8.8 26.5 8.5 25.6 9.1 25.0 Z"/>
+
+  <!-- Hands -->
+  <g transform-origin="13.7 22.7">
+    <animateTransform attributeName="transform" type="translate" values="0 0;0 -0.55;0 0;0 0.35;0 0" dur="0.5s" repeatCount="indefinite"/>
+    <path class="fill" d="M9.0 21.6 C9.7 20.8 11.0 20.7 11.8 21.4 C12.3 21.9 12.7 22.6 12.8 23.2 C12.9 23.9 12.5 24.4 11.8 24.4 H9.9 C9.2 24.4 8.7 23.8 8.7 23.2 C8.7 22.7 8.8 22.1 9.0 21.6 Z"/>
+    <path class="fill" d="M12.9 21.1 C13.6 20.7 14.4 20.7 15.1 21.1 C15.9 21.6 16.4 22.4 16.4 23.2 C16.4 23.9 15.9 24.4 15.2 24.4 H13.9 C13.2 24.4 12.7 23.8 12.7 23.1 C12.7 22.4 12.8 21.6 12.9 21.1 Z"/>
+  </g>
+
+  <!-- Typing motion lines -->
+  <g stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round">
+    <path d="M6.0 20.7 L5.0 22.0">
+      <animate attributeName="opacity" values="0;1;0;1;0" dur="0.5s" repeatCount="indefinite"/>
+    </path>
+    <path d="M6.8 22.1 L5.7 23.4">
+      <animate attributeName="opacity" values="1;0;1;0;1" dur="0.5s" repeatCount="indefinite"/>
+    </path>
+    <path d="M17.3 21.0 L18.1 20.0">
+      <animate attributeName="opacity" values="0;1;0;1;0" dur="0.5s" repeatCount="indefinite"/>
+    </path>
+  </g>
+</svg>

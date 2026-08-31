@@ -1,0 +1,7 @@
+{
+  "id": "default-explain-code",
+  "name": "Explain Code",
+  "command": "Explain the following code in detail. Describe what it does, its architecture, key classes/methods, data flow, and any design patterns used.\n\nCode to explain:\n${codeContext}\n\nProvide:\n# Code Explanation\n## Overview\n## Architecture\n## Key Components\n## Data Flow\n## Design Patterns\n## Potential Issues",
+  "parameters": ["codeContext"],
+  "template": true
+}

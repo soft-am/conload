@@ -1,0 +1,7 @@
+{
+  "id": "default-opencode-cli",
+  "name": "OpenCode CLI",
+  "command": "opencode -c",
+  "parameters": [],
+  "template": false
+}

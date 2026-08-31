@@ -1,0 +1,980 @@
+/* CONLOAD — compact JavaFX stylesheet.
+   Raw colors/font sizes are centralized in .root/.theme-light.
+   Existing selector and style-class names are preserved.
+   Single source of truth: com.conload.ui.AppColors — keep hex values in sync. */
+
+/* ══ TOKENS / DARK THEME ═══════════════════════════════════════════════ */
+.root {
+    -app-bg: transparent;
+    -app-panel: #111827;
+    -app-input: #070A13;
+    -app-log: -app-input;
+    -app-border: #1E293B;
+    -app-text: #b7c2c9;
+    -app-muted: #b7c2c9;
+    -app-success: #A7F3D0;
+    -app-warning: #FBBF24;
+    -app-error: #F87171;
+    -app-overlay: rgba(0,0,0,0.60);
+    -app-overlay-loading: rgba(0,0,0,0.82);
+    -app-icon-size: 20px;
+    -app-picker-hover: derive(-app-success, -40%);
+    -app-picker-selected: derive(-app-success, -25%);
+    -accent-color: -app-text;
+    -divider-primary: #183342;
+    -divider-secondary: #142B38;
+    -project-color-1: -app-success;
+    -project-color-2: -app-warning;
+    -project-color-3: -app-error;
+    -project-color-4: #60A5FA;
+    -project-color-5: #C084FC;
+    -project-color-6: #34D399;
+    -project-color-7: #FCD34D;
+    -project-color-8: #F472B6;
+    -project-color-9: #22D3EE;
+    -project-color-10: #FB923C;
+    -fx-font-family: "SF Pro Text", "Inter", "Roboto", "Helvetica Neue", "Arial", sans-serif;
+    -fx-font-size: -font-base;
+    -fx-background-color: radial-gradient(center 50% 70%, radius 110%, -bg-stop-1 0%, -bg-stop-2 60%, -bg-stop-3 100%);
+    -font-base: 18px;
+    -font-xs: 14px;
+    -font-lg: 20px;
+    -font-xl: 28px;
+    -font-kebab: 28px;
+    -font-hero: 37px;
+    -c-transparent: transparent;
+    -c-on-accent: #616876;
+    -c-control-border: #2B4859;
+    -c-control-hover: #102632;
+    -c-text-hover: #E5E9EC;
+    -c-panel-glass: rgba(17, 24, 39, 0.30);
+    -c-terminal-glass: rgba(9, 13, 22, 0.30);
+    -c-hover-soft: rgba(255, 255, 255, 0.04);
+    -c-selection: rgba(255, 255, 255, 0.20);
+    -c-accent-hover-soft: rgba(255, 255, 255, 0.05);
+    -c-danger-hover-soft: rgba(248, 113, 113, 0.08);
+    -c-danger-soft: rgba(248, 113, 113, 0.10);
+    -c-danger-hover: rgba(248, 113, 113, 0.18);
+    -c-sidebar-header: #0A1E2B;
+    -c-shadow: rgba(0,0,0,0.50);
+    -bg-stop-1: #09181B;
+    -bg-stop-2: #07151A;
+    -bg-stop-3: #050D12;
+}
+
+/* ══ LIGHT THEME OVERRIDES ═════════════════════════════════════════════ */
+.theme-light {
+    -app-bg: #F5F5F7;
+    -app-panel: #c4c8cf;
+    -app-input: #EEEEF2;
+    -app-log: -app-input;
+    -app-border: #D1D5DB;
+    -app-text: #18181B;
+    -app-muted: #6B7280;
+    -app-success: #15803D;
+    -app-warning: #B45309;
+    -app-error: #DC2626;
+    -app-overlay: rgba(0,0,0,0.45);
+    -app-overlay-loading: rgba(255,255,255,0.75);
+    -app-icon-size: 20px;
+    -app-picker-hover: derive(-app-success, 20%);
+    -app-picker-selected: derive(-app-success, 10%);
+}
+
+/* ══ SHARED PRIMITIVES ═════════════════════════════════════════════════ */
+.terminal-bar-session,
+.selections-count-badge,
+.task-badge-box .label,
+.sidebar-section-label,
+.sidebar-section-count,
+.sidebar-source-badge,
+.worktree-badge,
+.worktree-lock,
+.worktree-path,
+.worktree-session-icon,
+.worktree-session-text,
+.sidebar-session-subtitle,
+.sidebar-session-date,
+.sidebar-session-agent-pill,
+.popup-window-root .sessions-table .column-header,
+.popup-window-root .sessions-table .column-header .label,
+.popup-window-root .sessions-table .table-cell.session-meta,
+.popup-window-root .sessions-table .session-meta,
+.popup-window-root .sessions-table .row-no,
+.popup-window-root .sessions-table .cli-badge {
+    -fx-font-size: -font-xs;
+}
+.title,
+.title-gray,
+.bold,
+.field-label,
+.app-button,
+.selections-toggle-btn,
+.selections-count-badge,
+.app-button.recording,
+.popup-lang-toggle,
+.search-context-title,
+.badge,
+.project-tab > .button,
+.focus-working-text,
+.focus-show-btn,
+.section-header,
+.titled-pane > .title > .text,
+.tree-view.highlighted-download .tree-cell:selected,
+
+.sidebar-section-label,
+
+.worktree-kebab,
+.worktree-name,
+.worktree-name-current,
+.worktree-current-label,
+
+.dialog-pane .button,
+.popup-window-root .title,
+.popup-window-root .field-label,
+.popup-window-root .sessions-table .column-header,
+.popup-window-root .sessions-table .column-header .label,
+.popup-window-root .sessions-table .cli-badge,
+.popup-window-root .app-button {
+    -fx-font-weight: bold;
+}
+.app-button,
+.prompt-send-btn,
+.selections-toggle-btn,
+.quick-action-manage-btn,
+.terminal-action-btn,
+.mic-button,
+.popup-lang-toggle,
+.search-context-btn,
+.link-button,
+.icon-button,
+.tab-close,
+.remove-button,
+.project-tab,
+.project-tab > .button,
+.overlay-close,
+.focus-show-btn,
+.scroll-bar,
+.file-tree-refresh-btn,
+.worktree-list .list-cell:hover,
+.sidebar-session-card,
+.tree-view.picker-mode .tree-cell:hover,
+.prompt-template-combo,
+.prompt-template-combo .list-cell,
+.dialog-pane .button,
+.menu-item,
+.popup-window-root .app-button,
+.popup-window-root .icon-button {
+    -fx-cursor: hand;
+}
+.terminal-bar-label,
+.terminal-bar-session,
+.context-add-btn,
+.quick-action-manage-btn,
+.session-current-id,
+.mic-button,
+.tab-close,
+.project-tab > .button,
+.project-tab.active > .button,
+.project-tab.active .tab-close,
+.project-tab:hover > .button,
+.file-tree-refresh-btn,
+.sidebar-section-label,
+.worktree-name-current,
+.worktree-current-label,
+.sidebar-session-agent-pill,
+.sidebar-project-root-name,
+.project-files-tree .tree-cell.project-root-row,
+.popup-window-root .sessions-table .session-current-id,
+.popup-window-root .app-button.accent,
+.popup-window-root .app-button.accent:hover,
+.popup-window-root .app-button.accent .label,
+.popup-window-root .app-button.accent Label,
+.popup-window-root .app-button.accent:hover .label,
+.popup-window-root .app-button.accent:hover Label {
+    -fx-text-fill: -accent-color;
+}
+.error,
+.app-button.danger,
+.tab-close:hover,
+.remove-button,
+.project-tab.active .tab-close:hover,
+.overlay-close,
+.popup-window-root .app-button.danger,
+.popup-window-root .app-button.danger:hover,
+.popup-window-root .app-button.recording,
+.popup-window-root .app-button.recording:hover,
+.popup-window-root .tab-close:hover,
+.popup-window-root .app-button.danger .label,
+.popup-window-root .app-button.danger Label,
+.popup-window-root .app-button.danger:hover .label,
+.popup-window-root .app-button.danger:hover Label {
+    -fx-text-fill: -app-error;
+}
+.terminal-bar-session.clickable,
+.title-gray,
+.secondary,
+.muted,
+.hint,
+.hint-padded,
+.placeholder,
+.app-button,
+.selections-toggle-btn,
+.selections-count-badge,
+.terminal-action-btn,
+.task-badge-box .label,
+.link-button,
+.focus-show-btn,
+.worktree-path,
+.worktree-session-icon,
+.worktree-session-text,
+.sidebar-session-subtitle,
+.sidebar-session-date,
+.dialog-pane .button,
+.menu-item:disabled,
+.popup-window-root .secondary,
+.popup-window-root .hint,
+.popup-window-root .sessions-table .column-header,
+.popup-window-root .sessions-table .column-header .label,
+.popup-window-root .sessions-table .table-cell.session-meta,
+.popup-window-root .sessions-table .session-meta,
+.popup-window-root .sessions-table .row-no,
+.popup-window-root .sessions-table .cli-badge,
+.popup-window-root .app-button,
+.popup-window-root .icon-button,
+.popup-window-root .tab-close,
+.popup-window-root .app-button .label,
+.popup-window-root .app-button Label {
+    -fx-text-fill: -app-muted;
+}
+.title,
+.field-label,
+.input,
+.app-button.accent,
+.search-context-title,
+.link-button:hover,
+.icon-button:hover,
+.chip,
+.focus-working-text,
+.focus-show-btn:hover,
+.section-header,
+.log-area,
+.tree-cell,
+.project-files-tree .tree-cell,
+.sidebar-section-count,
+.sidebar-source-badge,
+.sidebar-context-name,
+.worktree-list .list-cell,
+.worktree-name,
+.worktree-badge,
+.sidebar-session-title,
+.table-cell,
+.combo-box .list-cell,
+.combo-box-popup .list-cell,
+.combo-box-popup .list-cell:filled:hover,
+.combo-box-popup .list-cell:filled:selected,
+.radio-button,
+.check-box,
+.dialog-pane .header-panel .label,
+.dialog-pane .content .label,
+.dialog-pane .label,
+.dialog-pane .text-field,
+.dialog-pane .text-area,
+.dialog-pane .combo-box,
+.dialog-pane .choice-box,
+.dialog-pane .button:hover,
+.dialog-pane .button:default,
+.dialog-pane .button:cancel,
+.dialog-pane .button:default:hover,
+.dialog-pane .button:cancel:hover,
+.menu-item,
+.menu-item > .label,
+.tooltip,
+.popup-window-root .title,
+.popup-window-root .label,
+.popup-window-root .field-label,
+.popup-window-root .input,
+.popup-window-root .text-area,
+.popup-window-root .sessions-table,
+.popup-window-root .sessions-table .table-row-cell,
+.popup-window-root .sessions-table .table-cell,
+.popup-window-root .app-button:hover,
+.popup-window-root .icon-button:hover,
+.popup-window-root .app-button:hover .label,
+.popup-window-root .app-button:hover Label {
+    -fx-text-fill: -app-text;
+}
+.check-box .box {
+    -fx-background-color: -app-input;
+    -fx-border-color: -c-control-border;
+    -fx-border-width: 1;
+    -fx-border-radius: 3;
+    -fx-background-radius: 3;
+}
+.check-box:selected .box {
+    -fx-background-color: -accent-color;
+    -fx-border-color: -accent-color;
+}
+.check-box .mark {
+    -fx-background-color: transparent;
+    -fx-shape: "M0,1 L1,0 L5,4 L9,0 L10,1 L6,5 L10,9 L9,10 L5,6 L1,10 L0,9 L4,5 Z";
+}
+.check-box:selected .mark {
+    -fx-background-color: -c-on-accent;
+}
+.prompt-send-btn,
+.app-button.recording,
+.worktree-header-kebab,
+.worktree-header-kebab > .label,
+.worktree-header-kebab:hover,
+.worktree-header-kebab:hover > .label,
+.worktree-kebab,
+.worktree-current .worktree-kebab {
+    -fx-text-fill: -c-on-accent;
+}
+.app-button:hover,
+.popup-window-root .sessions-table .table-row-cell:selected,
+.popup-window-root .sessions-table .table-row-cell.session-active:selected {
+    -fx-text-fill: -c-text-hover;
+}
+.prompt-send-btn, .titled-pane > .title > .arrow, .tree-cell .tree-disclosure-node .arrow { -fx-background-color: -accent-color; }
+.theme-light .bg-app,
+.task-badge-box,
+.chip,
+.scroll-pane,
+.scroll-pane > .viewport,
+.table-border,
+.tab-pane .tab,
+.tab-pane > .tab-header-area > .tab-header-background,
+.tab-pane > .tab-header-area,
+.tab-pane .tab-content-area,
+.tree-view,
+.table-view,
+.table-row-cell,
+.theme-light .popup-window-root {
+    -fx-background-color: -app-bg;
+}
+.combo-box-popup .list-cell:filled:hover, .combo-box-popup .list-cell:filled:selected, .menu-item:hover, .separator-menu-item { -fx-background-color: -app-border; }
+.terminal-bar-session.clickable,
+.input,
+.combo-box,
+.dialog-pane .text-field,
+.dialog-pane .text-area,
+.dialog-pane .combo-box,
+.dialog-pane .choice-box,
+.dialog-pane .button,
+.dialog-pane .button:default,
+.dialog-pane .button:cancel,
+.popup-window-root .input,
+.popup-window-root .text-area,
+.popup-window-root .sessions-table,
+.popup-window-root .sessions-table .column-header-background,
+.popup-window-root .sessions-table .column-header-background .filler,
+.popup-window-root .sessions-table .table-row-cell,
+.popup-window-root .app-button,
+.popup-window-root .app-button.accent,
+.popup-window-root .app-button.danger {
+    -fx-background-color: -app-input;
+}
+.bg-panel,
+.card,
+.card-bordered,
+.app-button,
+.prompt-collapsible,
+.search-context-btn,
+.project-tab.active,
+.overlay-card,
+.tab-pane .tab:selected,
+.titled-pane > .title,
+.titled-pane > .content,
+.table-view .column-header-background,
+.table-view .column-header,
+.table-row-cell:odd,
+.progress-bar > .track,
+.combo-box-popup .list-view,
+.combo-box-popup .list-cell,
+.dialog-pane,
+.dialog-pane .header-panel,
+.dialog-pane .content,
+.dialog-pane .button:hover,
+.dialog-pane .button:default:hover,
+.dialog-pane .button:cancel:hover,
+.context-menu,
+.tooltip,
+.md-viewer-root .web-view,
+.popup-window-root .app-button:hover {
+    -fx-background-color: -app-panel;
+}
+.panel, .panel-border-bottom, .panel-border-top, .panel-border-left { -fx-background-color: -c-panel-glass; }
+.bg-app,
+.bg-transparent,
+.terminal-bar-session,
+.prompt-stack,
+.prompt-template-row,
+.selections-toggle-btn,
+.mic-button,
+.link-button,
+.icon-button,
+.tab-close,
+.remove-button,
+.badge,
+.project-tab,
+.project-tab > .button,
+.overlay-close,
+.focus-show-btn,
+.scroll-transparent,
+.scroll-bar,
+.scroll-bar .track,
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button,
+.tree-cell,
+.tree-cell:selected,
+.tree-cell:focused,
+.project-files-tree .tree-cell:hover:selected,
+.project-files-tree .tree-cell:focused:selected,
+.worktree-section,
+.worktree-list,
+.worktree-list .list-cell,
+.table-cell,
+.combo-box .list-cell,
+.combo-box .arrow-button,
+.menu-item,
+.popup-window-root .sessions-table .column-header,
+.popup-window-root .sessions-table .column-header .label,
+.popup-window-root .sessions-table .table-cell,
+.popup-window-root .sessions-table .table-row-cell.session-active,
+.popup-window-root .sessions-table .table-row-cell:focused,
+.popup-window-root .sessions-table .table-cell:focused,
+.popup-window-root .icon-button,
+.popup-window-root .panel-border-bottom,
+.popup-window-root .panel-border-top {
+    -fx-background-color: -c-transparent;
+}
+.project-files-tree .tree-cell:selected,
+.project-files-tree .tree-cell:hover:selected,
+.project-files-tree .tree-cell:focused:selected {
+    -fx-background-color: transparent;
+    -fx-text-fill: -accent-color;
+    -fx-border-color: -accent-color;
+    -fx-border-width: 2;
+    -fx-border-radius: 3;
+}
+.search-context-btn:hover,
+.focus-show-btn:hover,
+.sidebar-section-count,
+.sidebar-source-badge,
+.sidebar-session-card:hover,
+.table-row-cell:selected,
+.table-row-cell:focused {
+    -fx-background-color: derive(-app-panel, 10%);
+}
+.text-area.input, .dialog-pane .text-area, .popup-window-root .text-area { -fx-control-inner-background: -app-input; }
+.context-add-btn:hover,
+.project-tab.active,
+.sidebar-session-card:selected,
+.tree-cell:selected .sidebar-session-card,
+.popup-window-root .sessions-table .table-row-cell:selected,
+.popup-window-root .sessions-table .table-row-cell.session-active,
+.popup-window-root .app-button.accent,
+.popup-window-root .app-button.accent:hover {
+    -fx-border-color: -accent-color;
+}
+.card-bordered,
+.input,
+.task-badge-box,
+.chip,
+.focus-show-btn,
+.combo-box,
+.combo-box-popup .list-view,
+.dialog-pane,
+.dialog-pane .text-field,
+.dialog-pane .text-area,
+.dialog-pane .combo-box,
+.dialog-pane .choice-box,
+.dialog-pane .button,
+.dialog-pane .button:default,
+.dialog-pane .button:cancel,
+.context-menu,
+.tooltip,
+.popup-window-root,
+.popup-window-root .input,
+.popup-window-root .text-area,
+.popup-window-root .sessions-table,
+.popup-window-root .sessions-table .column-header-background,
+.popup-window-root .app-button,
+.popup-window-root .panel-border-bottom,
+.popup-window-root .panel-border-top {
+    -fx-border-color: -app-border;
+}
+.app-button.danger,
+.app-button.recording,
+.remove-button,
+.popup-window-root .app-button.danger,
+.popup-window-root .app-button.danger:hover,
+.popup-window-root .app-button.recording,
+.popup-window-root .app-button.recording:hover {
+    -fx-border-color: -app-error;
+}
+.project-tab:hover,
+.combo-box:focused,
+.dialog-pane .button:hover,
+.dialog-pane .button:default:hover,
+.dialog-pane .button:cancel:hover,
+.popup-window-root .input:focused,
+.popup-window-root .app-button:hover {
+    -fx-border-color: -app-muted;
+}
+.input:focused,
+.overlay-card,
+.section-header,
+.table-border,
+.tab-pane .tab:selected,
+.tab-pane > .tab-header-area,
+.titled-pane > .title,
+.titled-pane > .content,
+.table-view .column-header {
+    -fx-border-color: -app-text;
+}
+.app-button, .app-button:hover, .terminal-action-btn { -fx-border-color: -c-control-border; }
+.terminal-bar-session,
+.app-button.quick-action-input,
+.selections-toggle-btn,
+.mic-button,
+.link-button,
+.project-tab,
+.project-tab > .button,
+.tab-pane .tab,
+.tree-view,
+.tree-cell,
+.worktree-list,
+.table-view,
+.table-row-cell,
+.table-cell,
+.popup-window-root .sessions-table .column-header-background .filler,
+.popup-window-root .sessions-table .table-row-cell,
+.popup-window-root .sessions-table .table-cell,
+.popup-window-root .sessions-table .cli-badge {
+    -fx-border-color: -c-transparent;
+}
+.panel-border-bottom,
+.panel-border-top,
+.terminal-section,
+.terminal-bar-session.clickable,
+.terminal-meta-group,
+.prompt-collapsible,
+.search-context-btn,
+.worktree-card {
+    -fx-border-color: -divider-secondary;
+}
+.terminal-meta-group,
+.card-bordered,
+.input,
+.prompt-collapsible,
+.prompt-send-btn,
+.mic-button,
+.popup-lang-toggle,
+.search-context-btn,
+.badge-ok,
+.badge-err,
+.overlay-card,
+.focus-show-btn,
+.scroll-bar .thumb,
+.sidebar-session-agent-pill,
+.progress-bar > .track,
+.progress-bar > .bar,
+.combo-box,
+.dialog-pane .text-field,
+.dialog-pane .text-area,
+.dialog-pane .button,
+.context-menu,
+.tooltip,
+.popup-window-root .input,
+.popup-window-root .text-area,
+.popup-window-root .app-button {
+    -fx-background-radius: 6;
+}
+.card, .worktree-card, .sidebar-session-card { -fx-background-radius: 8; }
+.popup-window-root { -fx-background-radius: 0 0 8 8; }
+.sidebar-section-count, .sidebar-source-badge, .worktree-badge { -fx-background-radius: 999; }
+.terminal-meta-group,
+.card-bordered,
+.input,
+.prompt-collapsible,
+.prompt-send-btn,
+.popup-lang-toggle,
+.search-context-btn,
+.remove-button,
+.overlay-card,
+.focus-show-btn,
+.combo-box,
+.dialog-pane .text-field,
+.dialog-pane .text-area,
+.dialog-pane .button,
+.tooltip,
+.popup-window-root .input,
+.popup-window-root .text-area,
+.popup-window-root .app-button {
+    -fx-border-radius: 6;
+}
+.worktree-card, .sidebar-session-card, .sidebar-session-card:selected, .tree-cell:selected .sidebar-session-card { -fx-border-radius: 8; }
+.popup-window-root { -fx-border-radius: 0 0 8 8; }
+.scroll-transparent,
+.popup-window-root .sessions-table,
+.popup-window-root .sessions-table .column-header,
+.popup-window-root .sessions-table .column-header .label,
+.popup-window-root .sessions-table .table-row-cell {
+    -fx-border-width: 0;
+}
+.sidebar-session-card, .sidebar-session-card:selected, .tree-cell:selected .sidebar-session-card { -fx-border-width: 0 0 0 3; }
+.panel-border-bottom,
+.section-header,
+.tab-pane > .tab-header-area,
+.sidebar-section-header,
+.popup-window-root .sessions-table .column-header-background,
+.popup-window-root .panel-border-bottom {
+    -fx-border-width: 0 0 1 0;
+}
+.project-tab, .project-tab.active, .tab-pane .tab:selected { -fx-border-width: 0 0 2 0; }
+.prompts-library-tabs .tab .label { -fx-text-fill: -app-text; }
+.prompts-library-tabs .tab:selected .label { -fx-text-fill: -c-text-hover; }
+.terminal-meta-group,
+.card-bordered,
+.search-context-btn,
+.overlay-card,
+.table-border,
+.titled-pane > .title,
+.worktree-card,
+.combo-box,
+.combo-box-popup .list-view,
+.context-menu,
+.popup-window-root .input {
+    -fx-border-width: 1;
+}
+.panel-border-top, .terminal-section, .popup-window-root .panel-border-top { -fx-border-width: 1 0 0 0; }
+.badge,
+.qa-terminal-separator,
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button,
+.project-files-tree .tree-cell.session-folder .tree-disclosure-node,
+.worktree-list,
+.worktree-header-kebab .arrow-button,
+.worktree-kebab .arrow-button,
+.menu-button.worktree-kebab .arrow-button,
+.worktree-path,
+.worktree-session-icon,
+.worktree-session-text,
+.project-files-tree .tree-cell:empty .tree-disclosure-node,
+.popup-window-root .sessions-table,
+.popup-window-root .sessions-table .column-header-background,
+.popup-window-root .sessions-table .table-row-cell {
+    -fx-padding: 0;
+}
+.selections-toggle-btn, .icon-button, .overlay-close { -fx-padding: 2 6 2 6; }
+.app-button,  .prompt-send-btn, .terminal-action-btn, .popup-lang-toggle { -fx-padding: 4 10 4 10; }
+.prompt-template-row{ -fx-padding: 24 24 14 14; }
+.icon-button, .app-button, .remove-button, .overlay-close, .worktree-kebab { -fx-alignment: center; }
+.popup-window-root .sessions-table .column-header,
+.popup-window-root .sessions-table .column-header .label,
+.popup-window-root .sessions-table .table-cell {
+    -fx-alignment: CENTER-LEFT;
+}
+.sidebar-section-header,
+.sidebar-context-row,
+.sidebar-source-row,
+.worktree-top-row,
+.worktree-session-pill,
+.sidebar-session-card,
+.sidebar-project-root-row {
+    -fx-alignment: CENTER_LEFT;
+}
+.terminal-meta-group, .search-context-panel, .check-box-table-cell { -fx-alignment: center; }
+.split-pane > .split-pane-divider,
+.popup-window-root .sessions-table .column-header,
+.popup-window-root .sessions-table .column-header .label,
+.popup-window-root .sessions-table .table-row-cell:focused,
+.popup-window-root .sessions-table .table-cell:focused {
+    -fx-background-insets: 0;
+}
+.project-files-tree .tree-cell.session-folder .tree-disclosure-node,
+.worktree-header-kebab .arrow-button,
+.worktree-kebab .arrow-button,
+.menu-button.worktree-kebab .arrow-button,
+.project-files-tree .tree-cell:empty .tree-disclosure-node {
+    -fx-max-height: 0;
+}
+.project-files-tree .tree-cell.session-folder .tree-disclosure-node,
+.worktree-header-kebab .arrow-button,
+.worktree-kebab .arrow-button,
+.menu-button.worktree-kebab .arrow-button,
+.project-files-tree .tree-cell:empty .tree-disclosure-node {
+    -fx-max-width: 10;
+}
+.project-files-tree .tree-cell.session-folder .tree-disclosure-node,
+.worktree-header-kebab .arrow-button,
+.worktree-kebab .arrow-button,
+.menu-button.worktree-kebab .arrow-button,
+.project-files-tree .tree-cell:empty .tree-disclosure-node {
+    -fx-opacity: 0;
+}
+
+/* ══ COMPONENT-SPECIFIC RULES ══════════════════════════════════════════ */
+.icon { -fx-font-size: -app-icon-size; }
+.panel-border-left { -fx-border-color: -divider-primary; -fx-border-width: 0 1 0 0; }
+.terminal-section { -fx-background-color: -c-terminal-glass; }
+.terminal-bar-session { -fx-padding: 2 8 2 8; -fx-background-radius: 4; -fx-border-radius: 4; }
+.terminal-meta-group { -fx-background-color: derive(-app-panel, -5%); -fx-padding: 3 6 3 6; }
+.card { -fx-padding: 12; }
+.hint-padded { -fx-padding: 12; -fx-text-alignment: center; }
+.placeholder { -fx-font-style: italic; }
+.field-label { -fx-padding: 6 0 2 0; }
+.success { -fx-text-fill: -app-success; }
+.warning { -fx-text-fill: -app-warning; }
+.input { -fx-prompt-text-fill: -app-muted; -fx-padding: 8 12 8 12; }
+.prompt-collapsible .text-area {-fx-padding: 16 18 16 18;}
+.text-area.input { -fx-highlight-fill: transparent; -fx-highlight-text-fill: -accent-color; }
+.prompt-action-overlay { -fx-spacing: 4; }
+.prompt-action-btn { -fx-margin: 4 14 10 14; }
+.app-button { -fx-border-radius: 5; -fx-background-radius: 5; }
+.app-button:hover { -fx-background-color: -c-control-hover; }
+.app-button:pressed { -fx-background-color: derive(-app-panel, -10%); }
+.app-button.danger:hover { -fx-background-color: derive(-app-error, -60%); }
+.app-button.quick-action-input { -fx-border-width: 1.5; }
+.prompt-collapsible { -fx-padding: 4 8 4 8; }
+.prompt-header-text { -fx-font-size: -font-xl; -fx-text-fill: -app-text; }
+.prompt-template-row .sparkle-seg { -fx-fill: -accent-color; }
+.prompt-template-row .workflow-seg { -fx-fill: -accent-color; }
+.prompt-template-combo { -fx-max-width: 300; }
+.prompt-send-btn:hover { -fx-background-color: derive(-accent-color, 15%); }
+.prompt-send-btn:disabled { -fx-background-color: derive(-app-text, -50%); -fx-text-fill: derive(-c-on-accent, -40%); }
+.selections-toggle-btn:hover { -fx-text-fill: derive(-app-muted, 20%); }
+.popup-window-root .recording-text-label { -fx-padding: 8 10 8 10; }
+.terminal-action-btn { -fx-border-radius: 5; -fx-background-radius: 5; }
+.terminal-action-btn:hover { -fx-background-color: derive(-app-panel, 20%); }
+.app-button.recording { -fx-background-color: derive(-app-error, -40%); -fx-border-width: 2; }
+.mic-button { -fx-padding: 2 4 2 4; -fx-content-display: graphic-only; }
+.mic-button:hover { -fx-background-color: derive(-app-panel, 20%); }
+.search-context-panel { -fx-padding: 4 0 4 0; }
+.search-context-btn { -fx-padding: 8 16 8 16; }
+.search-context-btn:hover { -fx-border-color: -app-success; }
+.download-spinner { -fx-progress-color: -accent-color; -fx-max-size: 14; -fx-min-size: 14; -fx-pref-size: 14; }
+.task-badge-box { -fx-border-radius: 10; -fx-background-radius: 10; -fx-padding: 2 8 2 6; -fx-alignment: center-left; }
+.link-button { -fx-padding: 4 8 4 0; -fx-underline: false; }
+.link-button:hover { -fx-underline: true; }
+.tab-close { -fx-padding: 0 4 0 4; }
+.badge { -fx-text-fill: -app-panel; }
+.badge-ok { -fx-background-color: -app-success; -fx-padding: 1 5 1 5; }
+.badge-err { -fx-background-color: -app-error; -fx-padding: 1 7 1 7; }
+.project-tab { -fx-border-radius: 0; -fx-background-radius: 0; -fx-padding: 8 12 8 12; -fx-min-height: 48px; -fx-pref-height: 48px; }
+.project-tab:hover { -fx-background-color: -c-hover-soft; }
+.robot-indicator { -fx-pref-width: 34px; -fx-pref-height: 34px; }
+.chip { -fx-border-radius: 3; -fx-background-radius: 3; -fx-padding: 1 6 1 6; }
+/* Locked workflow ${variable} chip in the template editor — non-editable,
+   accent-tinted so it reads as a fixed token distinct from editable prose. */
+.workflow-var-chip {
+    -fx-text-fill: -accent-color;
+    -fx-background-color: derive(-accent-color, -70%);
+    -fx-border-color: derive(-accent-color, 10%);
+    -fx-border-radius: 3;
+    -fx-background-radius: 3;
+    -fx-padding: 1 6 1 6;
+    -fx-font-family: monospace;
+}
+.separator { -fx-background-color: -accent-color; }
+.qa-terminal-separator { -fx-background-color: -divider-primary; -fx-opacity: 1.0; -fx-pref-height: 1; -fx-min-height: 1; -fx-max-height: 1; }
+.overlay-scene { -fx-background-color: -app-overlay; }
+.overlay-loading-box { -fx-background-color: -app-overlay-loading; }
+.focus-overlay { -fx-background-color: -bg-stop-3; }
+.brand-logo-btn .seg { -fx-stroke: -app-muted; }
+.brand-logo-btn:hover .seg { -fx-stroke: -app-text; }
+.icon-button .workflow-seg { -fx-fill: -app-muted; }
+.icon-button:hover .workflow-seg { -fx-fill: -app-text; }
+.app-button .zoom-seg { -fx-fill: -app-muted; }
+.app-button:hover .zoom-seg { -fx-fill: -app-text; }
+.app-button.accent .zoom-seg { -fx-fill: -accent-color; }
+.app-button.danger .zoom-seg { -fx-fill: -app-error; }
+.brand-logo-btn { -fx-padding: 2 2 2 2; -fx-content-display: graphic-only; }
+.focus-working-text { -fx-font-size: -font-hero; -fx-font-family: "SF Pro Text", "Inter", "Roboto", "Helvetica Neue", "Arial", sans-serif; }
+.focus-show-btn { -fx-padding: 8 24 8 24; }
+.focus-show-btn:hover { -fx-border-color: -app-success; }
+.section-header { -fx-padding: 20 0 8 0; }
+.scroll-pane { -fx-background: -app-bg; }
+.scroll-transparent { -fx-background: -c-transparent; }
+.scroll-bar { -fx-pref-width: 12; -fx-pref-height: 12; }
+.scroll-bar:vertical { -fx-pref-width: 12; }
+.scroll-bar:horizontal { -fx-pref-height: 12; }
+.scroll-bar .increment-arrow, .scroll-bar .decrement-arrow {
+    -fx-padding: 0;
+    -fx-shape: null;
+    -fx-background-color: transparent;
+}
+.scroll-bar .thumb { -fx-background-color: derive(-c-sidebar-header, 5%); }
+.scroll-bar .thumb:hover { -fx-background-color: derive(-c-sidebar-header, 25%); }
+.project-files-tree .scroll-bar .track,
+.scroll-bar .increment-button { -fx-pref-width: 0; -fx-pref-height: 0; }
+.scroll-bar .decrement-button { -fx-pref-width: 0; -fx-pref-height: 0; }
+.log-area { -fx-background-color: -app-log; -fx-control-inner-background: -app-log; -fx-highlight-fill: -app-text; -fx-highlight-text-fill: -app-bg; }
+.progress-accent { -fx-progress-color: -app-text; }
+.workflow-progress-warning { -fx-text-fill: -app-warning; }
+.titled-pane > .title > .text { -fx-fill: -app-text; }
+.titled-pane > .title > .arrow-button { -fx-padding: 0 12 0 12; }
+.titled-pane > .title > .arrow { -fx-shape: "M2,1 L7,5 L2,9 L3,9 L8,5 L3,1 Z"; -fx-scale-x: 1; -fx-scale-y: 1; }
+.titled-pane:expanded > .title > .arrow-button { -fx-rotate: 0; }
+.titled-pane:expanded > .title > .arrow { -fx-rotate: 90; }
+.titled-pane > .content { -fx-border-width: 0 1 1 1; }
+.progress-log-pane > .title > .text { -fx-font-weight: normal; -fx-fill: -app-muted; }
+.progress-log-pane > .content { -fx-background-color: -app-log; }
+.tree-cell { -fx-cell-size: 38px; }
+.tree-cell .tree-disclosure-node { -fx-padding: 0 8 0 8; }
+.tree-cell .tree-disclosure-node .arrow { -fx-shape: "M2,1 L7,5 L2,9 L3,9 L8,5 L3,1 Z"; -fx-scale-x: 1; -fx-scale-y: 1; }
+.tree-cell .tree-disclosure-node:expanded .arrow { -fx-rotate: 90; }
+.tree-view.highlighted-download .tree-cell:selected {
+    -fx-background-color: transparent;
+    -fx-text-fill: -accent-color;
+    -fx-border-color: -accent-color;
+    -fx-border-width: 2;
+    -fx-border-radius: 3;
+}
+
+.project-files-tree .tree-cell { -fx-cell-size: 30px; -fx-padding: 2 4 2 4;  -fx-text-fill: -app-muted;}
+.project-files-tree .tree-cell:hover {
+    -fx-background-color: transparent; /* 15% opacity */
+    -fx-text-fill: derive(-accent-color, 30% 0.20);
+    -fx-border-color: transparent;
+    -fx-border-width: 2;
+    -fx-border-radius: 3;
+    -fx-cursor: hand;
+}
+.project-files-tree .tree-cell .tree-disclosure-node { -fx-padding: 5 8 0 20; }
+.file-tree-refresh-btn:hover { -fx-text-fill: derive(-accent-color, 20%); }
+.session-folder { -fx-text-fill: derive(-accent-color, -15%); }
+.project-files-tree .tree-cell.session-folder { -fx-padding: 2 4 2 0; }
+.sidebar-section-header {
+    -fx-background-color: -c-sidebar-header;
+    -fx-border-color: -c-transparent -c-transparent -divider-secondary -c-transparent;
+    -fx-padding: 7 20 7 20;
+    -fx-spacing: 10;
+}
+.sidebar-section-label { -fx-letter-spacing: 0.14em; }
+.sidebar-section-rule { -fx-background-color: derive(-app-border, 12%); -fx-max-height: 1px; -fx-pref-height: 1px; }
+.sidebar-section-action {
+    -fx-background-color: transparent;
+    -fx-text-fill: -accent-color;
+    -fx-font-size: -font-kebab;
+    -fx-font-weight: bold;
+    -fx-border-color: derive(-app-border, 7%);
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-padding: 0 4 0 4;
+    -fx-min-width: 32px;
+    -fx-pref-width: 32px;
+    -fx-max-width: 32px;
+    -fx-min-height: 24px;
+    -fx-pref-height: 24px;
+    -fx-max-height: 24px;
+    -fx-cursor: hand;
+    -fx-alignment: CENTER;
+}
+.sidebar-section-action:hover {
+    -fx-background-color: derive(-accent-color, -70%);
+    -fx-text-fill: derive(-accent-color, 20%);
+}
+.sidebar-section-action > .label,
+.menu-button.sidebar-section-action > .label {
+    -fx-font-size: -font-kebab;
+    -fx-text-fill: -accent-color;
+    -fx-font-weight: bold;
+}
+.sidebar-section-action:hover > .label,
+.menu-button.sidebar-section-action:hover > .label { -fx-text-fill: derive(-accent-color, 20%); }
+.sidebar-session-title, .sidebar-session-subtitle, .sidebar-session-agent-pill,
+.sidebar-session-date, .sidebar-context-name, .sidebar-source-name { -fx-text-overrun: ELLIPSIS; -fx-min-width: 0; }
+.sidebar-session-card, .sidebar-context-row, .sidebar-source-row { -fx-min-width: 0; }
+.sidebar-section-count { -fx-padding: 1 8 1 8; -fx-min-width: 22; -fx-alignment: CENTER; }
+.cross-context-section {
+    -fx-spacing: 4;
+    -fx-padding: 10 14 10 14;
+    -fx-border-color: -divider-secondary transparent transparent transparent;
+    -fx-background-color: derive(-app-panel, 3%);
+}
+.sidebar-source-badge { -fx-padding: 1 8 1 8; -fx-min-width: 22; -fx-alignment: CENTER; }
+.sidebar-context-row { -fx-spacing: 8; -fx-padding: 2 0 2 0; }
+.sidebar-source-row { -fx-spacing: 6; -fx-padding: 2 0 2 18; }
+.sidebar-source-name { -fx-text-fill: -app-text; }
+.sidebar-session-date { -fx-text-alignment: right; -fx-alignment: CENTER_RIGHT; }
+.sidebar-session-agent-pill { -fx-background-color: transparent; -fx-padding: 0 5; }
+.sidebar-project-root-row { -fx-spacing: 8; -fx-padding: 10 4 8 4; }
+
+
+
+.worktree-list .list-cell { -fx-padding: 0 1 0 1; }
+.worktree-list .list-cell:hover { -fx-background-color: derive(-app-panel, 14%); }
+.worktree-list .list-cell.worktree-current { -fx-background-color: derive(-app-panel, 8%); }
+.worktree-card { -fx-spacing: 0; -fx-background-color: derive(-app-panel, 4%); -fx-padding: 1 2 1 8; }
+.worktree-list .list-cell:hover .worktree-card { -fx-background-color: derive(-app-panel, 16%); -fx-border-color: derive(-accent-color, 10%); }
+.worktree-top-row { -fx-spacing: 3; -fx-min-height: 24px; -fx-pref-height: 24px; -fx-max-height: 24px; }
+
+.worktree-kebab {
+    -fx-font-size: -font-kebab;
+    -fx-text-fill: -accent-color;
+    -fx-font-weight: bold;
+    -fx-padding: 0 5 0 5;
+    -fx-min-height: 24px;
+    -fx-pref-height: 24px;
+    -fx-max-height: 24px;
+    -fx-alignment: CENTER;
+}
+.worktree-kebab > .label,
+.menu-button.worktree-kebab > .label,
+.worktree-current .worktree-kebab > .label {
+    -fx-font-size: -font-kebab;
+    -fx-text-fill: -accent-color;
+    -fx-font-weight: bold;
+}
+.worktree-name-current { -fx-text-fill: -accent-color; }
+.worktree-branch-glyph { -fx-text-fill: derive(-accent-color, 10%); }
+.worktree-badge { -fx-background-color: derive(-app-panel, 14%); -fx-padding: 1 6 1 6; }
+.worktree-lock { -fx-text-fill: derive(-accent-color, 10%); }
+.worktree-path { -fx-text-overrun: ELLIPSIS; -fx-min-height: 0; -fx-pref-height: 14px; -fx-max-height: 14px; }
+.worktree-session-pill { -fx-spacing: 4; -fx-max-width: Infinity; }
+.worktree-session-text { -fx-text-overrun: ELLIPSIS; }
+.worktree-error { -fx-text-fill: -app-warning; -fx-padding: 4 12 4 16; }
+
+
+.project-files-tree .tree-cell.project-root-row { -fx-padding: 6 8 6 4; }
+.tree-view.picker-mode .tree-cell:hover { -fx-background-color: -app-picker-hover; -fx-text-fill: -app-success; }
+.tree-view.picker-mode .tree-cell:hover:selected { -fx-background-color: -app-picker-selected; }
+.tree-view.picker-mode .tree-cell:hover:focused { -fx-background-color: -app-picker-hover; }
+.table-row-cell { -fx-cell-size: 40px; }
+.split-pane > .split-pane-divider { -fx-background-color: -divider-primary; -fx-padding: 0 1 0 1; -fx-pref-width: 4; -fx-min-width: 4; }
+.split-pane > .split-pane-divider:hover { -fx-background-color: derive(-app-muted, 20%); }
+.split-pane > .split-pane-divider:armed { -fx-background-color: derive(-app-text, -20%); }
+.progress-bar > .bar { -fx-background-color: -app-text; }
+.combo-box .arrow-button .arrow { -fx-background-color: -app-muted; }
+.dialog-pane .button { -fx-padding: 7 16; }
+.context-menu { -fx-effect: dropshadow(three-pass-box, -c-shadow, 8, 0, 0, 2); }
+.menu-item { -fx-padding: 5 12 5 12; }
+.tooltip { -fx-padding: 4 8 4 8; }
+.popup-window-root { -fx-background-color: radial-gradient(center 50% 70%, radius 110%, -bg-stop-1 0%, -bg-stop-2 60%, -bg-stop-3 100%); -fx-border-width: 1.5; }
+.popup-window-root .field-label { -fx-padding: 6 0 2 0; }
+.popup-window-root .input { -fx-prompt-text-fill: -app-muted; -fx-padding: 10 14; }
+.popup-window-root .text-area { -fx-padding: 10 14; }
+.popup-window-root .mono-editor { -fx-font-family: "SF Pro Text", "Inter", "Roboto", "Helvetica Neue", "Arial", sans-serif; }
+.popup-window-root .sessions-table { -fx-table-cell-border-color: -c-transparent; }
+.popup-window-root .sessions-table .column-header { -fx-padding: 6 8; }
+.popup-window-root .sessions-table .column-header .label { -fx-padding: 6 8; }
+.popup-window-root .sessions-table .table-row-cell { -fx-cell-size: 32px; }
+.popup-window-root .sessions-table .table-row-cell:filled:hover { -fx-background-color: derive(-app-panel, 8%); }
+.popup-window-root .sessions-table .table-row-cell:selected { -fx-background-color: -c-selection; -fx-border-width: 0 0 0 3px; }
+.popup-window-root .sessions-table .table-cell { -fx-padding: 4 8; }
+.popup-window-root .sessions-table .table-row-cell.session-active { -fx-border-width: 0 0 0 2px; }
+.popup-window-root .sessions-table .table-row-cell.session-active:selected { -fx-background-color: -c-selection; }
+.popup-window-root .sessions-table .row-no { -fx-alignment: CENTER-RIGHT; }
+.popup-window-root .sessions-table .cli-badge { -fx-background-color: derive(-app-panel, 6%); -fx-background-radius: 3; -fx-border-radius: 3; -fx-padding: 1 6; }
+.popup-window-root .app-button { -fx-padding: 8 18; }
+.popup-window-root .app-button:pressed { -fx-background-color: derive(-app-panel, -10%); }
+.popup-window-root .app-button.accent:hover { -fx-background-color: -c-accent-hover-soft; }
+.popup-window-root .app-button.danger:hover { -fx-background-color: -c-danger-hover-soft; }
+.popup-window-root .app-button.recording { -fx-background-color: -c-danger-soft; }
+.popup-window-root .app-button.recording:hover { -fx-background-color: -c-danger-hover; }
+.popup-window-root .icon-button { -fx-padding: 4 8; }

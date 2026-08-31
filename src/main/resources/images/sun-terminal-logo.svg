@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="32" height="32" viewBox="0 0 32 32"
+     fill="none">
+  <!-- Sun rays -->
+  <g stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round">
+    <path d="M16 2.5V5"/>
+    <path d="M16 27V29.5"/>
+    <path d="M2.5 16H5"/>
+    <path d="M27 16H29.5"/>
+    <path d="M6.45 6.45L8.2 8.2"/>
+    <path d="M23.8 23.8L25.55 25.55"/>
+    <path d="M25.55 6.45L23.8 8.2"/>
+    <path d="M8.2 23.8L6.45 25.55"/>
+  </g>
+
+  <!-- Transparent sun center -->
+  <circle cx="16" cy="16" r="8.5"
+          fill="transparent"
+          stroke="#FFFFFF"
+          stroke-width="2"/>
+
+  <!-- Terminal CLI symbol -->
+  <g stroke="#FFFFFF" stroke-width="1.8"
+     stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 12.7L15 15.7L12 18.7"/>
+    <path d="M17 19H21"/>
+  </g>
+</svg>

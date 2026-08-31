@@ -1,0 +1,7 @@
+{
+  "id": "default-bugs-security",
+  "name": "Find Bugs & Security Issues",
+  "command": "Analyze the following code for bugs, security vulnerabilities, race conditions, resource leaks, and edge cases. Rate severity for each finding.\n\nCode to analyze:\n${codeContext}\n\nProvide:\n# Bug & Security Analysis\n## Critical Issues\n## High Severity\n## Medium Severity\n## Low Severity\n## Recommendations\n## Safe Code Suggestion",
+  "parameters": ["codeContext"],
+  "template": true
+}

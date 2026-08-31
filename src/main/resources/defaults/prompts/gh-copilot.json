@@ -1,0 +1,7 @@
+{
+  "id": "default-gh-copilot-cli",
+  "name": "GitHub Copilot CLI",
+  "command": "gh copilot",
+  "parameters": [],
+  "template": false
+}

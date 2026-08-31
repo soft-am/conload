@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="24" height="24" viewBox="0 0 24 24"
+     fill="none">
+  <!-- Microphone body (capsule) -->
+  <rect x="9" y="2" width="6" height="11" rx="3"
+        fill="#FFFFFF"/>
+  <!-- Mic stand (curved cradle) -->
+  <path d="M5 11V12a7 7 0 0 0 14 0V11"
+        stroke="#FFFFFF" stroke-width="2"
+        stroke-linecap="round" fill="none"/>
+  <!-- Stem -->
+  <path d="M12 19V22"
+        stroke="#FFFFFF" stroke-width="2"
+        stroke-linecap="round"/>
+  <!-- Base -->
+  <path d="M8 22h8"
+        stroke="#FFFFFF" stroke-width="2"
+        stroke-linecap="round"/>
+</svg>

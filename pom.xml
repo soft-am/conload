@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.conload</groupId>
+    <artifactId>conload</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+    <name>Copilot Context Loader</name>
+
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <javafx.version>21.0.2</javafx.version>
+        <jackson.version>2.17.0</jackson.version>
+        <app.name>conload</app.name>
+        <app.version>1.0.0</app.version>
+        <!-- JavaFX native-lib classifier. Empty = auto-detect host OS (dev builds).
+             Per-OS profiles (-Pmac / -Plinux / -Pwindows) set this to pin a single platform. -->
+        <javafx.classifier></javafx.classifier>
+        <platform.suffix></platform.suffix>
+        <!-- Shade-plugin native-lib exclusion patterns for per-OS JARs.
+             Default: "__NOEXCLUDE__" matches nothing (dev builds keep auto-detected natives).
+             Per-OS profiles set these to strip wrong-platform JavaFX native libs. -->
+        <javafx.exclude1>__NOEXCLUDE__</javafx.exclude1>
+        <javafx.exclude2>__NOEXCLUDE__</javafx.exclude2>
+    </properties>
+
+    <repositories>
+        <!-- JediTerm (IntelliJ terminal engine) is published here, not on Maven Central -->
+        <repository>
+            <id>jetbrains-intellij-dependencies</id>
+            <url>https://packages.jetbrains.team/maven/p/ij/intellij-dependencies</url>
+            <releases><enabled>true</enabled></releases>
+            <snapshots><enabled>false</enabled></snapshots>
+        </repository>
+    </repositories>
+
+    <dependencies>
+        <!-- JavaFX modules — ${javafx.classifier} pins native libs to one platform.
+             Empty = auto-detect host OS (dev builds / mvn javafx:run).
+             Profiles -Pmac / -Plinux / -Pwindows set it to mac / linux / win respectively. -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>${javafx.version}</version>
+            <classifier>${javafx.classifier}</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-fxml</artifactId>
+            <version>${javafx.version}</version>
+            <classifier>${javafx.classifier}</classifier>
+        </dependency>
+        <!-- javafx-web: WebView hosting xterm.js (real terminal emulator, same as VS Code) -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-web</artifactId>
+            <version>${javafx.version}</version>
+            <classifier>${javafx.classifier}</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-graphics</artifactId>
+            <version>${javafx.version}</version>
+            <classifier>${javafx.classifier}</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-base</artifactId>
+            <version>${javafx.version}</version>
+            <classifier>${javafx.classifier}</classifier>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.17.2</version>
+        </dependency>
+        <!-- Real PTY for embedded Copilot terminal -->
+        <dependency>
+            <groupId>org.jetbrains.pty4j</groupId>
+            <artifactId>pty4j</artifactId>
+            <version>0.12.5</version>
+        </dependency>
+        <!-- Required by pty4j PtyHelpers on Linux (provides jtermios.JTermios) -->
+        <dependency>
+            <groupId>org.jetbrains.pty4j</groupId>
+            <artifactId>purejavacomm</artifactId>
+            <version>0.0.11.1</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna</artifactId>
+            <version>5.9.0</version>
+        </dependency>
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna-platform</artifactId>
+            <version>5.9.0</version>
+        </dependency>
+        <!-- Vosk speech-to-text (offline recognition, bundles native libs) -->
+        <dependency>
+            <groupId>com.alphacephei</groupId>
+            <artifactId>vosk</artifactId>
+            <version>0.3.45</version>
+        </dependency>
+        <!-- Vosk requires JNA ≥ 5.13 — override the project's older 5.9.0 -->
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna</artifactId>
+            <version>5.14.0</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.12.1</version>
+                <configuration>
+                    <source>21</source>
+                    <target>21</target>
+                    <encoding>UTF-8</encoding>
+                    <compilerArgs>
+                        <!-- pty4j has no module-info; grant com.conload access to it -->
+                        <arg>--add-reads=com.conload=ALL-UNNAMED</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+
+            <!-- Run with: mvn javafx:run -->
+            <plugin>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-maven-plugin</artifactId>
+                <version>0.0.8</version>
+                <configuration>
+                    <mainClass>com.conload.App</mainClass>
+                    <launcher>conload</launcher>
+                    <options>
+                        <!-- pty4j + jediterm have no module-info; grant read access at runtime -->
+                        <option>--add-reads=com.conload=ALL-UNNAMED</option>
+                    </options>
+                </configuration>
+            </plugin>
+
+            <!-- Fat JAR for development: mvn package -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.5.2</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals><goal>shade</goal></goals>
+                        <configuration>
+                            <finalName>conload-${project.version}${platform.suffix}</finalName>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <!-- Plain class, not Application subclass: java -jar works without module-path -->
+                                    <mainClass>com.conload.Launcher</mainClass>
+                                </transformer>
+                            </transformers>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                                <!-- Per-OS: strip wrong-platform JavaFX native libs from org.openjfx artifacts.
+                                     vosk / pty4j / JNA natives are untouched (different groupIds). -->
+                                <filter>
+                                    <artifact>org.openjfx:*</artifact>
+                                    <excludes>
+                                        <exclude>${javafx.exclude1}</exclude>
+                                        <exclude>${javafx.exclude2}</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <!-- ================================================================
+         Native installer profile — activated with:  mvn package -Pnative
+         Preps target/libs/ with the app JAR + non-JavaFX dependencies.
+         jpackage itself is invoked by the build scripts (build-mac.sh /
+         build-linux.sh / build-windows.bat) or by .github/workflows/release.yml,
+         which pass the correct per-OS installer type and platform flags.
+         Requires a JavaFX-bundled JDK (Liberica Full or Azul Zulu FX).
+         Run this profile on the SAME OS as the target platform:
+           Windows → .exe installer
+           macOS   → .dmg
+           Linux   → .deb
+          ============================================================ -->
+    <profiles>
+        <profile>
+            <id>native</id>
+            <build>
+                <plugins>
+                    <!-- Step 1: copy all non-JavaFX dependencies into target/libs/ -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-dependency-plugin</artifactId>
+                        <version>3.6.1</version>
+                        <executions>
+                            <execution>
+                                <id>copy-deps</id>
+                                <phase>prepare-package</phase>
+                                <goals><goal>copy-dependencies</goal></goals>
+                                <configuration>
+                                    <outputDirectory>${project.build.directory}/libs</outputDirectory>
+                                    <excludeGroupIds>org.openjfx</excludeGroupIds>
+                                    <includeScope>runtime</includeScope>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- Step 2: copy the main (non-shaded) JAR to target/libs/ -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-jar-plugin</artifactId>
+                        <version>3.3.0</version>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/libs</outputDirectory>
+                            <archive>
+                                <manifest>
+                                    <mainClass>com.conload.App</mainClass>
+                                </manifest>
+                            </archive>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- ================================================================
+             Per-OS fat JAR profiles — produce a platform-specific JAR whose
+             bundled JavaFX native libs match the target OS.
+             Run with:  mvn -DskipTests package -Pmac      → conload-1.0.0-mac.jar
+                        mvn -DskipTests package -Plinux    → conload-1.0.0-linux.jar
+                        mvn -DskipTests package -Pwindows  → conload-1.0.0-windows.jar
+             Each JAR runs with:  java -jar conload-1.0.0-<platform>.jar
+             on any plain JDK 21+ (no JavaFX required on the target machine).
+             Build all three on any OS (classifier forces the right natives).
+             ================================================================ -->
+        <profile>
+            <id>mac</id>
+            <properties>
+                <!-- Leave javafx.classifier empty: auto-detect host arch (mac-aarch64 on Apple Silicon, mac on Intel).
+                     Native libs are always correct because the build runs ON a Mac. -->
+                <platform.suffix>-mac</platform.suffix>
+            </properties>
+        </profile>
+        <profile>
+            <id>linux</id>
+            <properties>
+                <javafx.classifier>linux</javafx.classifier>
+                <platform.suffix>-linux</platform.suffix>
+                <javafx.exclude1>**/*.dylib</javafx.exclude1>
+                <javafx.exclude2>**/*.dll</javafx.exclude2>
+            </properties>
+        </profile>
+        <profile>
+            <id>windows</id>
+            <properties>
+                <javafx.classifier>win</javafx.classifier>
+                <platform.suffix>-windows</platform.suffix>
+                <javafx.exclude1>**/*.dylib</javafx.exclude1>
+                <javafx.exclude2>**/*.so</javafx.exclude2>
+            </properties>
+        </profile>
+    </profiles>
+</project>

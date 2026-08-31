@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="35" height="35" viewBox="0 0 35 35"
+     fill="none">
+  <style>
+    :root {
+      --corner-top-left: #ffffff;
+      --corner-top-right: #ffffff;
+      --corner-bottom-left: #ffffff;
+      --corner-bottom-right: #ffffff;
+      --terminal-symbol: #ffffff;
+    }
+  </style>
+
+  <g stroke-width="2.8"
+     stroke-linecap="round"
+     stroke-linejoin="round">
+    <path d="M7 12 V7 H12"
+          stroke="var(--corner-top-left, #ffffff)"/>
+    <path d="M23 7 H28 V12"
+          stroke="var(--corner-top-right, #ffffff)"/>
+    <path d="M7 23 V28 H12"
+          stroke="var(--corner-bottom-left, #ffffff)"/>
+    <path d="M23 28 H28 V23"
+          stroke="var(--corner-bottom-right, #ffffff)"/>
+  </g>
+
+  <g stroke="var(--terminal-symbol, #ffffff)"
+     stroke-width="2.3"
+     stroke-linecap="round"
+     stroke-linejoin="round">
+    <path d="M12.5 14.2 L16.2 17.5 L12.5 20.8"/>
+    <path d="M18.4 20.8 H23"/>
+  </g>
+</svg>
