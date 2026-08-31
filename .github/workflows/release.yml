@@ -57,9 +57,28 @@ jobs:
           distribution: liberica
           java-version: '21'
           java-package: jdk+fx
+      # Inline build using bash (Git Bash on Windows runners) — avoids
+      # .bat CRLF line-ending issues entirely.
       - name: Build installer
-        shell: cmd
-        run: call build-windows.bat
+        shell: bash
+        run: |
+          mvn clean package -Pnative -DskipTests -q
+          jpackage \
+            --input target/libs \
+            --main-jar conload-1.0.0.jar \
+            --main-class com.conload.App \
+            --name conload \
+            --app-version 1.0.0 \
+            --description "Download Confluence and Jira pages as Markdown for AI/Copilot context" \
+            --vendor "conload" \
+            --dest target/installer \
+            --type exe \
+            --win-dir-chooser \
+            --win-shortcut \
+            --win-menu \
+            --java-options "--add-modules=javafx.controls,javafx.fxml,javafx.graphics,javafx.base" \
+            --java-options "--add-reads=com.conload=ALL-UNNAMED" \
+            --java-options "-Xmx512m"
       - name: Rename to stable asset name
         shell: bash
         run: |
@@ -83,10 +102,11 @@ jobs:
           java-package: jdk+fx
       - name: Install rpm toolchain (for .rpm type)
         run: sudo apt-get update && sudo apt-get install -y rpm
-      - name: Build .deb installer
-        run: ./build-linux.sh deb
-      - name: Build .rpm installer
-        run: ./build-linux.sh rpm
+      # Build both .deb and .rpm in one pass — the script builds the JAR
+      # once, then runs jpackage for each type (avoids mvn clean wiping
+      # the first installers when the second type is built).
+      - name: Build .deb and .rpm installers
+        run: ./build-linux.sh deb rpm
       - name: Rename to stable asset names
         run: |
           mv target/installer/conload_*.deb target/installer/conload.deb

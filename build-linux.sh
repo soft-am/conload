@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 # ============================================================
-#  Build conload native Linux installer (.deb)
+#  Build conload native Linux installer (.deb and/or .rpm)
 #  Run this script ON Linux.
+#
+#  Usage:
+#    ./build-linux.sh deb          # build .deb only
+#    ./build-linux.sh rpm          # build .rpm only
+#    ./build-linux.sh deb rpm      # build both (one Maven build pass)
 #
 #  Requirements:
 #    - Liberica Full JDK 21+ (includes JavaFX)
@@ -12,37 +17,46 @@
 #    - Place icon at  package/linux/icon.png  (optional, 48x48 or 256x256 PNG)
 # ============================================================
 set -e
-# Choose installer type: deb or rpm
-TYPE="${1:-deb}"
+# Choose installer types (default: deb)
+TYPES=("$@")
+if [ ${#TYPES[@]} -eq 0 ]; then TYPES=("deb"); fi
+
 echo ""
-echo "=== conload — Linux Native Build (.${TYPE}) ==="
+echo "=== conload — Linux Native Build (types: ${TYPES[*]}) ==="
 echo ""
-# 1. Build JAR + deps
+
+# 1. Build JAR + deps ONCE (regardless of how many types requested)
 echo "[1/3] Building JAR and copying dependencies..."
 mvn clean package -Pnative -DskipTests -q
+
 # 2. Determine icon arg
 ICON_ARG=""
 if [ -f "package/linux/icon.png" ]; then
     ICON_ARG="--icon package/linux/icon.png"
 fi
-# 3. jpackage
-echo "[2/3] Creating Linux .${TYPE} installer..."
-jpackage \
-  --input target/libs \
-  --main-jar conload-1.0.0.jar \
-  --main-class com.conload.App \
-  --name conload \
-  --app-version 1.0.0 \
-  --description "Download Confluence and Jira pages as Markdown for AI/Copilot context" \
-  --vendor "conload" \
-  --dest target/installer \
-  --type "${TYPE}" \
-  --linux-shortcut \
-  --java-options "--add-modules=javafx.controls,javafx.fxml,javafx.graphics,javafx.base" \
-  --java-options "--add-reads=com.conload=ALL-UNNAMED" \
-  --java-options "-Xmx512m" \
-  $ICON_ARG
+
+# 3. jpackage for each requested type
+for TYPE in "${TYPES[@]}"; do
+    echo "[2/N] Creating Linux .${TYPE} installer..."
+    jpackage \
+      --input target/libs \
+      --main-jar conload-1.0.0.jar \
+      --main-class com.conload.App \
+      --name conload \
+      --app-version 1.0.0 \
+      --description "Download Confluence and Jira pages as Markdown for AI/Copilot context" \
+      --vendor "conload" \
+      --dest target/installer \
+      --type "${TYPE}" \
+      --linux-shortcut \
+      --java-options "--add-modules=javafx.controls,javafx.fxml,javafx.graphics,javafx.base" \
+      --java-options "--add-reads=com.conload=ALL-UNNAMED" \
+      --java-options "-Xmx512m" \
+      $ICON_ARG
+done
+
 echo ""
 echo "[3/3] Done!"
-echo "Installer: target/installer/conload_1.0.0_amd64.${TYPE}"
+echo "Installers in target/installer/"
+ls -la target/installer/ 2>/dev/null || true
 echo ""
