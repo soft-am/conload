@@ -118,19 +118,14 @@ Offline speech-to-text is also available through Vosk.
 
 ## Screenshots
 
-<!-- Recommended:
-Add one large hero screenshot here showing the complete Conload workspace.
+<p align="center">
+  <img src="docs/images/screenshot-banner.png" alt="conload overview" width="100%" />
+</p>
 
-Example:
-
-![Conload workspace](docs/images/conload-main.png)
-
-Then optionally add 2–3 smaller screenshots:
-
-| Cross-context | Agent terminal | Git worktrees |
-|---|---|---|
-| ![](docs/images/context.png) | ![](docs/images/terminal.png) | ![](docs/images/worktrees.png) |
--->
+<p align="center">
+  <img src="docs/images/screenshot-1.png" alt="conload screenshot" width="49%" />
+  <img src="docs/images/screenshot-2.png" alt="conload screenshot" width="49%" />
+</p>
 
 ---
 
