@@ -990,20 +990,22 @@
 
 /* ── Incomplete-config banner (shown at top of app until setup is done) ── */
 .config-banner {
-    -fx-background-color: -app-error;
+    -fx-background-color: -app-bg;
+    -fx-border-color: -app-warning;
+    -fx-border-width: 1 0 1 0;
     -fx-padding: 7 18 7 18;
     -fx-spacing: 10;
     -fx-alignment: CENTER_LEFT;
 }
-.config-banner .label { -fx-text-fill: #FFFFFF; }
+.config-banner .label { -fx-text-fill: -app-warning; }
 .config-banner .config-banner-icon { -fx-font-size: 14; }
 .config-banner .app-button {
     -fx-background-color: transparent;
-    -fx-border-color: #FFFFFF;
+    -fx-border-color: -app-warning;
     -fx-border-width: 1;
-    -fx-text-fill: #FFFFFF;
+    -fx-text-fill: -app-warning;
 }
 .config-banner .app-button:hover {
-    -fx-background-color: rgba(255,255,255,0.15);
+    -fx-background-color: derive(-app-warning, -80%);
 }
-.config-banner .icon-button { -fx-text-fill: #FFFFFF; }
+.config-banner .icon-button { -fx-text-fill: -app-warning; }

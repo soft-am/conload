@@ -57,22 +57,39 @@ your agent can read, then gives you a terminal to run it in — all in one windo
 
 ## Download & install
 
-Pre-built installers are produced by CI (`.github/workflows/release.yml`) on every `v*` tag push — one per OS, each
-bundling its own JRE so no separate JDK install is needed on the target machine.
+### Quick start — run from source (recommended for now)
 
-| Platform | Installer |
-|---|---|
-| **macOS** (Apple Silicon / Intel) | [`conload.dmg`](https://github.com/soft-am/conload/releases/latest/download/conload.dmg) |
-| **Windows** (x86_64) | [`conload.exe`](https://github.com/soft-am/conload/releases/latest/download/conload.exe) |
-| **Linux** (Debian/Ubuntu) | [`conload.deb`](https://github.com/soft-am/conload/releases/latest/download/conload.deb) |
-| **Linux** (Fedora/RHEL/SUSE) | [`conload.rpm`](https://github.com/soft-am/conload/releases/latest/download/conload.rpm) |
+Requires **JDK 21+** and **Maven 3.8+**.
 
-On first launch the app creates a `~/.conload/` folder for its state (config, credentials, sessions) and seeds the
-default CLI types, prompts, and workflow templates from the bundled defaults — nothing needs to be configured before
-first use.
+```bash
+git clone https://github.com/soft-am/conload.git
+cd conload
+mvn javafx:run
+```
 
-> **macOS note:** the `.dmg` is not code-signed (no Apple Developer ID yet). On first launch, right-click the app →
-> **Open** → confirm, to dismiss Gatekeeper's "unidentified developer" warning.
+That's it. The app launches, creates a `~/.conload/` folder for its state on first run,
+and seeds the default CLI types, prompts, and workflow templates from the bundled
+defaults — nothing needs to be configured before first use.
+
+> See [Build from source](#run-from-source) for distribution JARs, native installers,
+> and per-OS build details.
+
+### Pre-built installers — Coming Soon
+
+Native installers (`.dmg` / `.exe` / `.deb` / `.rpm`), each bundling its own JRE so no
+separate JDK install is needed on the target machine, are produced by CI on every `v*`
+tag push. They are not published yet — **coming soon**.
+
+| Platform | Installer | Status |
+|---|---|---|
+| **macOS** (Apple Silicon / Intel) | `conload.dmg` | Coming Soon |
+| **Windows** (x86_64) | `conload.exe` | Coming Soon |
+| **Linux** (Debian/Ubuntu) | `conload.deb` | Coming Soon |
+| **Linux** (Fedora/RHEL/SUSE) | `conload.rpm` | Coming Soon |
+
+> **macOS note:** the `.dmg` will not be code-signed (no Apple Developer ID yet). On
+> first launch, right-click the app → **Open** → confirm, to dismiss Gatekeeper's
+> "unidentified developer" warning.
 
 [All releases](https://github.com/soft-am/conload/releases) · [Latest release](https://github.com/soft-am/conload/releases/latest)
 
