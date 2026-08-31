@@ -5,6 +5,8 @@ import com.conload.ui.Theme;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -12,9 +14,13 @@ import javafx.stage.StageStyle;
 
 /**
  * A brief splash screen shown on app start — a borderless centered window
- * showing the conload logo (rendered from the bundled SVG paths) and the app
- * name on a dark background. Auto-hidden by {@link #hide()} once the main
- * window is ready.
+ * showing the conload logo (PNG, not WebView-based) and the app name on a
+ * dark background. Auto-hidden by {@link #hide()} once the main window is
+ * ready.
+ *
+ * <p>Uses {@link ImageView} with a bundled PNG (not {@link SvgIcon}) to avoid
+ * creating a WebView — a WebView loading spinner would block the JavaFX
+ * Application Thread during {@code buildScene()} and appear as a stuck loader.
  */
 public class SplashScreen {
 
@@ -26,8 +32,9 @@ public class SplashScreen {
     }
 
     private void buildUI() {
-        // Logo — rendered from the SVG path data using SvgIcon (no PNG needed)
-        SvgIcon logo = new SvgIcon("/images/logo.svg", 96, "-app-text");
+        ImageView logo = new ImageView(new Image("/images/logo-128.png"));
+        logo.setFitWidth(96);
+        logo.setFitHeight(96);
 
         Label title = new Label("CONLOAD");
         title.getStyleClass().addAll("title", "splash-title");
