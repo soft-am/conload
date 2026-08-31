@@ -1,0 +1,23 @@
+# Auto-detect text files, normalize to LF in-repo, checkout with native EOL.
+* text=auto
+
+# Windows batch files MUST have CRLF line endings — cmd.exe fails
+# instantly on LF-only .bat/.cmd files.
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+
+# Shell scripts — always LF.
+*.sh    text eol=lf
+
+# Binary files — never normalize.
+*.png   binary
+*.jpg   binary
+*.ico   binary
+*.icns  binary
+*.jar   binary
+*.dmg   binary
+*.exe   binary
+*.deb   binary
+*.rpm   binary
+*.fst   binary
+*.bin   binary

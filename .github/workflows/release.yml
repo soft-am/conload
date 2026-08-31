@@ -59,7 +59,7 @@ jobs:
           java-package: jdk+fx
       - name: Build installer
         shell: cmd
-        run: build-windows.bat
+        run: call build-windows.bat
       - name: Rename to stable asset name
         shell: bash
         run: |
