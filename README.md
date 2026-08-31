@@ -1,57 +1,151 @@
 # conload
 
-**A local context workspace for any CLI-based AI agent.**
+**The context layer for CLI coding agents.**
 
-`conload` combines three things a developer needs to use an AI agent effectively:
+Give your coding agent the context your team already has — Jira issues, Confluence documentation, GitHub pull requests, commits, and local project files — without manually collecting and pasting everything into a prompt.
 
----
-* **🕸️ Recursive Cross-Context Engine:** Don't feed your agent raw snippets. Input a single Jira key, PR URL, or Confluence link — `conload` recursively resolves linked tickets, parent epics, Confluence spec trees, and GitHub commits into a unified, deduplicated Markdown knowledge graph (`cross_context_hierarchy.md`).
-* **💻 True Multi-Terminal Workspace:** Built-in **xterm.js + Pty4J** terminal engine (the same shell setup as VS Code). Run `opencode`, `aider`, `claude-code`, or `copilot` inside isolated per-project tabs with persistent sessions.
-* **🌳 Native Git Worktree Management:** Switch context without dirty `git stash` hacks. Spin up parallel Git worktrees directly in the sidebar — each worktree automatically gets its own working directory, terminal state, and agent session.
-* **🔒 100% Local & Privacy-First:** No third-party LLM APIs are called by the platform. Downloading docs, parsing ticket ADF graphs, and offline speech-to-text dictation (via Vosk) all execute entirely on your machine.
-* **⚡ One-Click Workflows:** Auto-generate refinement documents, holistic code reviews (diff + spec + ticket), or reverse-engineering maps using built-in parameterized prompt templates (`${variable}`).
+`conload` turns scattered engineering knowledge into structured, local, agent-ready context and gives you a workspace to use it with **Claude Code, Codex, OpenCode, GitHub Copilot CLI, Aider, Gemini CLI, or any other terminal-based agent**.
 
-
-## ⚡ Key Highlights at a Glance
-
-
-1. **Context loading** — download Confluence pages, Jira issues, and GitHub PRs/commits as clean Markdown.
-2. **A real terminal** — run `opencode`, GitHub Copilot, `aider`, `claude-code`, or *any* CLI agent in an embedded
-   xterm.js terminal, one per project.
-3. **Cross-context workflows** — give a single Jira key, PR URL, or Confluence page and the app recursively gathers
-   every related issue, doc, and commit into one folder, then writes a ready-to-send prompt.
-
-Everything runs locally. No data leaves your network. No external LLM API is called. Speech dictation works fully
-offline.
+> **One starting point → full engineering context → your coding agent.**
 
 ---
 
-## Screenshots
+## How it works
 
-<p align="center">
-  <img src="docs/images/screenshot-banner.png" alt="conload overview" width="100%" />
-</p>
+```text
+Jira issue / Confluence page / GitHub PR
+                    │
+                    ▼
+        Recursive Cross-Context Engine
+                    │
+        ┌───────────┼────────────┐
+        ▼           ▼            ▼
+      Jira      Confluence     GitHub
+     issues        docs      PRs / commits
+        └───────────┼────────────┘
+                    ▼
+          Structured local context
+       cross_context_hierarchy.md
+                    │
+                    ▼
+       Claude Code / Codex / OpenCode
+       Copilot CLI / Aider / any CLI agent
+```
 
-<p align="center">
-  <img src="docs/images/screenshot-1.png" alt="conload screenshot" width="49%" />
-  <img src="docs/images/screenshot-2.png" alt="conload screenshot" width="49%" />
-</p>
+Start with a single Jira key, Confluence URL, or GitHub PR.
 
-<!-- TODO(captions): image content isn't machine-readable in this environment,
-     so the alt text + captions above are placeholders. If you want descriptive
-     captions, tell me briefly what each image shows and I'll rename the files
-     and update the alt text to match. -->
+`conload` recursively follows related engineering context — linked Jira issues, parent epics, Confluence pages, PRs, and commits — deduplicates everything, and writes the result into a structured local context folder your agent can read directly.
 
 ---
 
 ## Why conload
 
-CLI agents are powerful but context-starved: they can read files on disk, but they cannot browse your Confluence, query
-Jira, or fetch PR diffs. `conload` bridges that gap. It turns scattered enterprise knowledge into a folder of Markdown
-your agent can read, then gives you a terminal to run it in — all in one window.
+Coding agents are increasingly good at understanding your **codebase**.
 
-> **Enterprise-privacy-first.** All downloads, speech recognition, and terminal sessions stay on your machine. `conload`
-> never calls an external LLM API.
+But the reason the code exists often lives somewhere else:
+
+* requirements in Jira
+* architecture decisions in Confluence
+* implementation history in commits
+* discussion and decisions in pull requests
+* supporting documents scattered across different systems
+
+Without that context, an agent may understand *what the code does* while missing *why it does it*.
+
+`conload` bridges that gap.
+
+Instead of manually copying tickets, documentation, PR descriptions, and code history into prompts, give `conload` one starting point and let it build the surrounding context automatically.
+
+---
+
+## Core capabilities
+
+### 🕸️ Recursive cross-context discovery
+
+Start with a Jira issue, Confluence page, or GitHub PR and recursively discover related engineering knowledge.
+
+`conload` follows relationships between sources and builds a deduplicated context tree containing Jira issues, parent epics, Confluence specifications, GitHub commits, PR data, attachments, and related references.
+
+The generated `cross_context_hierarchy.md` gives both you and your agent a map of the collected context.
+
+### 💻 Agent-independent terminal workspace
+
+Run the coding agent you already use.
+
+`conload` provides real embedded terminal sessions using **xterm.js + Pty4J**, with support for tools such as:
+
+`claude-code` · `codex` · `opencode` · `copilot` · `aider` · `gemini-cli` · `ollama`
+
+CLI definitions are configurable, so new terminal-based agents can be added without changing `conload`.
+
+### 🌳 Git worktrees for parallel agent work
+
+Create and manage Git worktrees directly from the workspace.
+
+Each worktree gets its own:
+
+* working directory
+* terminal
+* agent session
+* branch context
+
+This makes it practical to run several coding tasks or agents in parallel without repeatedly switching branches or using `git stash`.
+
+### ⚡ Reusable workflows and prompts
+
+Create parameterized workflows for repetitive engineering tasks such as:
+
+* ticket refinement
+* implementation planning
+* code review against Jira/Confluence requirements
+* reverse-engineering existing functionality
+* architecture analysis
+* documentation generation
+
+Templates support `${variable}` placeholders and can reference context files directly.
+
+### 🔒 Local-first context processing
+
+Downloaded Jira, Confluence, and GitHub content is processed and stored locally.
+
+**conload itself does not send your engineering context to an LLM API.**
+
+The CLI agent you choose to run may communicate with its own provider according to that tool's configuration and privacy policy.
+
+Offline speech-to-text is also available through Vosk.
+
+---
+
+## Screenshots
+
+<!-- Recommended:
+Add one large hero screenshot here showing the complete Conload workspace.
+
+Example:
+
+![Conload workspace](docs/images/conload-main.png)
+
+Then optionally add 2–3 smaller screenshots:
+
+| Cross-context | Agent terminal | Git worktrees |
+|---|---|---|
+| ![](docs/images/context.png) | ![](docs/images/terminal.png) | ![](docs/images/worktrees.png) |
+-->
+
+---
+
+## What makes conload different?
+
+`conload` is **not another coding agent**.
+
+It is a workspace and context layer around the agents you already use.
+
+The goal is to solve a different problem:
+
+> **Your coding agent has access to the repository.
+> conload helps it understand the engineering context around the repository.**
+
+That context can span Jira, Confluence, GitHub history, local documentation, and multiple related tickets — and `conload` turns it into something an agent can consume directly.
 
 ---
 
@@ -74,20 +168,20 @@ defaults — nothing needs to be configured before first use.
 > See [Build from source](#run-from-source) for distribution JARs, native installers,
 > and per-OS build details.
 
-### Pre-built installers — Coming Soon
+### Pre-built installers
 
 Native installers (`.dmg` / `.exe` / `.deb` / `.rpm`), each bundling its own JRE so no
 separate JDK install is needed on the target machine, are produced by CI on every `v*`
-tag push. They are not published yet — **coming soon**.
+tag push.
 
-| Platform | Installer | Status |
-|---|---|---|
-| **macOS** (Apple Silicon / Intel) | `conload.dmg` | Coming Soon |
-| **Windows** (x86_64) | `conload.exe` | Coming Soon |
-| **Linux** (Debian/Ubuntu) | `conload.deb` | Coming Soon |
-| **Linux** (Fedora/RHEL/SUSE) | `conload.rpm` | Coming Soon |
+| Platform | Download |
+|---|---|
+| **macOS** (Apple Silicon / Intel) | [`conload.dmg`](https://github.com/soft-am/conload/releases/latest/download/conload.dmg) |
+| **Windows** (x86_64) | [`conload.exe`](https://github.com/soft-am/conload/releases/latest/download/conload.exe) |
+| **Linux** (Debian/Ubuntu) | [`conload.deb`](https://github.com/soft-am/conload/releases/latest/download/conload.deb) |
+| **Linux** (Fedora/RHEL/SUSE) | [`conload.rpm`](https://github.com/soft-am/conload/releases/latest/download/conload.rpm) |
 
-> **macOS note:** the `.dmg` will not be code-signed (no Apple Developer ID yet). On
+> **macOS note:** the `.dmg` is not code-signed (no Apple Developer ID yet). On
 > first launch, right-click the app → **Open** → confirm, to dismiss Gatekeeper's
 > "unidentified developer" warning.
 
