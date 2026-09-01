@@ -321,7 +321,7 @@ public final class ProjectFileTreeCell extends TreeCell<File> {
             }
         }
         // Workflow folders show only the workflow icon — suppress source icons.
-        if (workflow) { result.add("/images/workflows-sparkle.svg"); return result; }
+        if (workflow) { result.add("/images/cross-context.svg"); return result; }
         if (confluence) result.add("/images/confluence-logo.svg");
         if (jira) result.add("/images/jira-logo.svg");
         if (github) result.add("/images/github-logo.svg");

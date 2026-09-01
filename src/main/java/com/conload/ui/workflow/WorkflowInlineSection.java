@@ -2,6 +2,7 @@ package com.conload.ui.workflow;
 
 import com.conload.ui.Icons;
 import com.conload.ui.Theme;
+import com.conload.ui.components.CrossContextIcon;
 import com.conload.ui.components.UiFactory;
 import com.conload.util.FileUtil;
 import com.conload.util.Json;
@@ -19,6 +20,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.TextArea;
@@ -149,7 +151,9 @@ public final class WorkflowInlineSection extends VBox {
     }
 
     private HBox buildActionRow() {
-        gatherBtn = UiFactory.accentButton(Icons.DOWNLOAD + " Gather cross-context");
+        gatherBtn = UiFactory.accentButton(" Gather cross-context");
+        gatherBtn.setGraphic(new CrossContextIcon(16));
+        gatherBtn.setContentDisplay(ContentDisplay.LEFT);
         gatherBtn.setDisable(true);
         gatherBtn.setOnAction(e -> startGathering());
 
@@ -216,6 +220,7 @@ public final class WorkflowInlineSection extends VBox {
         gatheringCancelled = false;
         gatherErrors.clear();
         progressLabel.getStyleClass().remove("workflow-progress-warning");
+        host.showTaskBadge("Gathering…", true);
 
         WorkflowEnvironment env = new WorkflowEnvironment(
                 host.config(), host.githubToken(), host.githubApiUrl(), host.workspacePath(),
@@ -276,14 +281,17 @@ public final class WorkflowInlineSection extends VBox {
             progressLabel.getStyleClass().add("workflow-progress-warning");
             progressLabel.setText(Icons.WARNING + " Gathered: " + summary
                     + " — " + errorCount + " error(s) occurred; see log below.");
+            host.hideTaskBadge();
             // Keep the section + log visible so the user can read the errors.
         } else if (totalFiles == 0) {
             progressLabel.getStyleClass().add("workflow-progress-warning");
             progressLabel.setText(Icons.WARNING + " Gathered 0 files — nothing was downloaded; "
                     + "check inputs/credentials and the log below.");
+            host.hideTaskBadge();
             // Nothing useful was gathered; keep the section open.
         } else {
             progressLabel.setText(Icons.CHECK + " Gathered: " + summary + " — prompt loaded below.");
+            host.showTaskBadge(Icons.CHECK + " Cross-context ready", false);
             UiFactory.hide(this);
         }
     }
@@ -352,6 +360,7 @@ public final class WorkflowInlineSection extends VBox {
         cancelBtn.setDisable(true);
         UiFactory.hide(cancelBtn);
         gatherBtn.setDisable(false);
+        host.hideTaskBadge();
         progressLabel.setText("✗ Failed: " + t.getMessage());
         logArea.appendText("\nERROR: " + t.getMessage() + "\n");
         for (StackTraceElement e : t.getStackTrace()) {

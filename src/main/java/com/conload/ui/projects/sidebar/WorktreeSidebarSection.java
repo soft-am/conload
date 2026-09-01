@@ -10,6 +10,7 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.Menu;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ProgressIndicator;
@@ -23,6 +24,7 @@ import javafx.scene.layout.VBox;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -33,7 +35,8 @@ public final class WorktreeSidebarSection {
     private final Consumer<Worktree> onSelect;
     private final Consumer<Worktree> onRemove;
     private final Supplier<String> currentPath;
-    private final Supplier<Map<String, String>> sessionLabels;
+    private final Supplier<Map<String, List<WorktreeSessionBadge.SessionInfo>>> sessionInfos;
+    private final BiConsumer<String, Integer> onActivateTerminalSession;
     private final ListView<Worktree> list = new ListView<>();
     private final ProgressIndicator spinner = new ProgressIndicator();
     private final Label errorLabel = new Label();
@@ -42,13 +45,15 @@ public final class WorktreeSidebarSection {
     public WorktreeSidebarSection(Runnable onCreate, Runnable onRefresh,
                                   Consumer<Worktree> onSelect, Consumer<Worktree> onRemove,
                                   Supplier<String> currentPath,
-                                  Supplier<Map<String, String>> sessionLabels) {
+                                  Supplier<Map<String, List<WorktreeSessionBadge.SessionInfo>>> sessionInfos,
+                                  BiConsumer<String, Integer> onActivateTerminalSession) {
         this.onCreate = onCreate;
         this.onRefresh = onRefresh;
         this.onSelect = onSelect;
         this.onRemove = onRemove;
         this.currentPath = currentPath;
-        this.sessionLabels = sessionLabels;
+        this.sessionInfos = sessionInfos;
+        this.onActivateTerminalSession = onActivateTerminalSession;
         view = buildSection();
     }
 
@@ -211,7 +216,7 @@ public final class WorktreeSidebarSection {
             rowKebab.setMinHeight(0);
             rowKebab.setPrefHeight(16);
             rowKebab.setMaxHeight(16);
-            rowKebab.getItems().addAll(worktreeMenuItems(w));
+            rowKebab.getItems().addAll(buildKebabItems(w));
             Region rowSpacer = UiFactory.hSpacer();
             HBox.setHgrow(rowSpacer, Priority.ALWAYS);
             HBox topRow = new HBox(6, left, rowSpacer, rowKebab);
@@ -228,20 +233,6 @@ public final class WorktreeSidebarSection {
             path.setMaxHeight(14);
             VBox card = new VBox(0, topRow, path);
             card.getStyleClass().add("worktree-card");
-            String label = sessionLabels.get().get(w.getPath());
-            if (label != null && !label.isBlank()) {
-                Label sessIcon = new Label(Icons.SESSION);
-                sessIcon.getStyleClass().add("worktree-session-icon");
-                Label sessText = new Label(label);
-                sessText.getStyleClass().add("worktree-session-text");
-                HBox pill = new HBox(4, sessIcon, sessText);
-                pill.getStyleClass().add("worktree-session-pill");
-                pill.setMinHeight(0);
-                pill.setPrefHeight(14);
-                pill.setMaxHeight(14);
-                Tooltip.install(pill, new Tooltip(label));
-                card.getChildren().add(pill);
-            }
             return card;
         }
 
@@ -249,6 +240,34 @@ public final class WorktreeSidebarSection {
             ContextMenu menu = new ContextMenu();
             menu.getItems().addAll(worktreeMenuItems(w));
             return menu;
+        }
+
+        private List<MenuItem> buildKebabItems(Worktree w) {
+            List<MenuItem> items = new ArrayList<>();
+            List<WorktreeSessionBadge.SessionInfo> infos = sessionInfos.get()
+                    .getOrDefault(w.getPath(), List.of());
+            if (!infos.isEmpty()) {
+                Menu sessionsMenu = new Menu(Icons.SESSION + " Sessions (" + infos.size() + ")");
+                for (WorktreeSessionBadge.SessionInfo s : infos) {
+                    int idx = s.subIndex();
+                    String label;
+                    if (s.title() != null && !s.title().isBlank()) {
+                        label = s.title();
+                    } else if (s.sessionId() != null && !s.sessionId().isBlank()) {
+                        label = s.sessionType() + " #" + s.sessionId();
+                    } else {
+                        label = "Terminal " + (idx + 1);
+                    }
+                    MenuItem mi = new MenuItem("[" + (idx + 1) + "] " + label);
+                    mi.getStyleClass().add("worktree-session-menu-item");
+                    mi.setOnAction(e -> onActivateTerminalSession.accept(w.getPath(), idx));
+                    sessionsMenu.getItems().add(mi);
+                }
+                items.add(sessionsMenu);
+                items.add(new SeparatorMenuItem());
+            }
+            items.addAll(worktreeMenuItems(w));
+            return items;
         }
 
         private List<MenuItem> worktreeMenuItems(Worktree w) {

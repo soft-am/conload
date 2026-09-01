@@ -151,7 +151,7 @@ public final class SearchExecutionController {
         cancelled.set(false);
         if (ui.searchButton() != null) ui.searchButton().setDisable(true);
         ui.stopButton().setDisable(false);
-        setStatus(Icons.LOADING + "  Searching — please wait…", null);
+        setStatus(Icons.LOADING + "  Searching — please wait…", "warning");
         ui.setSearching().accept(true);
         ui.resetResults().run();
     }

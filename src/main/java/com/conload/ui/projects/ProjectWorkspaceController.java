@@ -12,6 +12,7 @@ import com.conload.ui.components.UiFactory;
 import com.conload.ui.terminal.CopilotTerminalPane;
 import com.conload.ui.terminal.RobotIndicator;
 import com.conload.ui.projects.workspace.ProjectTerminalFactory;
+import com.conload.ui.projects.workspace.TerminalGroup;
 import com.conload.model.Project;
 import com.conload.model.Worktree;
 import com.conload.model.QuickAction;
@@ -34,6 +35,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -59,6 +61,7 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
 
     {
         terminalFactory = new ProjectTerminalFactory(stage, configService, projectService, pidRegistry,
+                new HashMap<>(),
                 projectTerminals, projectColors, projectCharacters, projectFilesPanes,
                 color -> {
                     if (terminalSeparator != null) terminalSeparator.setStyle("-accent-color: " + color + ";");
@@ -107,7 +110,7 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
             if (!openProjectIds.contains(p.getId())) continue; // only show tabs currently open
             stillOpen.add(p.getId());
             boolean active = p.getId().equals(activeProjectId);
-            CopilotTerminalPane t = projectTerminals.get(activeWorkspaceKey(p.getId()));
+            CopilotTerminalPane t = activeTerminal(activeWorkspaceKey(p.getId()));
             boolean busy = (t != null && t.busyProperty().get());
             String color = projectColors.getOrDefault(p.getId(), ProjectColors.DEFAULT);
 
@@ -210,6 +213,7 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
     }
 
     private void updateProjectTabStates() {
+        if (terminalSubtabStrip != null) terminalSubtabStrip.refreshActive();
         if (projectTabsBar == null) return;
         java.util.Map<String, Project> byId = new java.util.HashMap<>();
         for (Project p : projectService.loadProjects()) byId.put(p.getId(), p);
@@ -218,7 +222,7 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
             HBox box = e.getValue();
             Project p = byId.get(id);
             if (p == null) continue;
-            CopilotTerminalPane t = projectTerminals.get(activeWorkspaceKey(id));
+            CopilotTerminalPane t = activeTerminal(activeWorkspaceKey(id));
             boolean active = id.equals(activeProjectId);
             boolean busy = (t != null && t.busyProperty().get());
             String color = projectColors.getOrDefault(id, ProjectColors.DEFAULT);
@@ -303,12 +307,12 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
         // Close & discard EVERY terminal belonging to this project — the base
         // workspace terminal plus any open worktree terminals (keys whose
         // projectId half equals this id).
-        java.util.Iterator<Map.Entry<String, CopilotTerminalPane>> it =
+        java.util.Iterator<Map.Entry<String, com.conload.ui.projects.workspace.TerminalGroup>> it =
                 projectTerminals.entrySet().iterator();
         while (it.hasNext()) {
-            Map.Entry<String, CopilotTerminalPane> e = it.next();
+            Map.Entry<String, com.conload.ui.projects.workspace.TerminalGroup> e = it.next();
             if (id.equals(keyProjectId(e.getKey()))) {
-                if (e.getValue() != null) e.getValue().closeTerminal();
+                for (CopilotTerminalPane t : e.getValue().terminals()) t.closeTerminal();
                 it.remove();
             }
         }
@@ -350,7 +354,7 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
 
     protected void sendToActiveTerminal(String command) {
         CopilotTerminalPane terminal = (activeProjectId != null)
-                ? projectTerminals.get(activeWorkspaceKey(activeProjectId)) : null;
+                ? activeTerminal(activeWorkspaceKey(activeProjectId)) : null;
         if (terminal != null && command != null && !command.isBlank()) {
             terminal.sendInput(command);
         }
@@ -371,12 +375,17 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
      * a tab close (not just an app restart).
      */
     protected void restoreOpenTabs() {
-        List<OpenTabsService.OpenTab> saved = openTabsService.load();
+        List<OpenTabsService.OpenTab> allSaved = openTabsService.load();
+        if (allSaved.isEmpty()) return;
+        List<OpenTabsService.OpenTab> saved = allSaved.stream()
+                .filter(t -> t.sessionId() != null && !t.sessionId().isBlank())
+                .toList();
         if (saved.isEmpty()) return;
         List<Project> projects = projectService.loadProjects();
         // Group entries by project preserving save order (base first, then any
         // worktrees) — a project may now have several saved OpenTabs, one per
         // workspace (base + each open worktree), each carrying its own session.
+        // Sub-terminals (terminalSubId > 0) are created after the first.
         java.util.Map<String, java.util.List<OpenTabsService.OpenTab>> byProject =
                 new java.util.LinkedHashMap<>();
         for (OpenTabsService.OpenTab tab : saved)
@@ -387,35 +396,53 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
             Project p = projects.stream().filter(x -> x.getId().equals(pid)).findFirst().orElse(null);
             if (p == null) continue;
             openProjectIds.add(pid);
-            // Open each workspace in order: base first, then worktrees. The
-            // last one ends up as the active (visible) workspace for this
-            // project. Each terminal is created lazily and kept alive; the
-            // saved session id is injected as a one-click resume target.
+            // Group by workspace key, then create terminals in subId order.
+            java.util.Map<String, java.util.List<OpenTabsService.OpenTab>> byWsKey = new java.util.LinkedHashMap<>();
             for (OpenTabsService.OpenTab tab : grp.getValue()) {
-                String wt = tab.worktreePath();
-                if (wt == null) wt = "";
-                if (wt.isBlank()) {
-                    doSwitch(p);          // base workspace
-                } else {
-                    switchToWorkspace(p, wt);  // a linked worktree
+                String wt = tab.worktreePath() == null ? "" : tab.worktreePath();
+                String wsKey = workspaceKey(pid, wt);
+                byWsKey.computeIfAbsent(wsKey, k -> new java.util.ArrayList<>()).add(tab);
+            }
+            for (java.util.Map.Entry<String, java.util.List<OpenTabsService.OpenTab>> wsGrp : byWsKey.entrySet()) {
+                String wsKey = wsGrp.getKey();
+                java.util.List<OpenTabsService.OpenTab> wsTabs = wsGrp.getValue();
+                wsTabs.sort(java.util.Comparator.comparingInt(OpenTabsService.OpenTab::terminalSubId));
+                // Renumber subIds to 0,1,2,… so indices match the created
+                // terminals (filtering may have removed some, leaving gaps).
+                java.util.List<OpenTabsService.OpenTab> renumbered = new java.util.ArrayList<>();
+                for (int i = 0; i < wsTabs.size(); i++) {
+                    OpenTabsService.OpenTab t = wsTabs.get(i);
+                    renumbered.add(OpenTabsService.of(t.projectId(), t.worktreePath(),
+                            t.pid(), t.sessionId(), t.sessionType(), i));
                 }
-                if (tab.pid() > 0 || (tab.sessionId() != null && !tab.sessionId().isBlank())) {
-                    System.out.println("[RESTORE] " + p.getName()
-                        + (wt.isBlank() ? "" : " [" + new File(wt).getName() + "]")
-                        + " — old PID " + tab.pid()
-                        + (tab.sessionId() != null && !tab.sessionId().isBlank()
-                            ? ", " + tab.sessionType() + " session: " + tab.sessionId()
-                            : ""));
+                wsTabs = renumbered;
+                OpenTabsService.OpenTab first = wsTabs.get(0);
+                String wt = first.worktreePath() == null ? "" : first.worktreePath();
+                if (wt.isBlank()) doSwitch(p);
+                else switchToWorkspace(p, wt);
+                for (int si = 1; si < wsTabs.size(); si++) {
+                    terminalFactory.createNew(p, wsKey, wt.isBlank() ? resolveWorkspaceSafe(p) : wt);
                 }
-                // Inject the saved session id as a one-click resume target.
-                // Only opencode/copilot are wired today; the sessionType
-                // discriminator leaves room for other CLIs to be added later.
-                String stype = tab.sessionType();
-                String sid   = tab.sessionId();
-                if (sid != null && !sid.isBlank()
-                        && ("opencode".equals(stype) || "copilot".equals(stype))) {
-                    CopilotTerminalPane t = projectTerminals.get(workspaceKey(pid, wt));
-                    if (t != null) t.setPendingResumeSession(stype, sid);
+                for (OpenTabsService.OpenTab tab : wsTabs) {
+                    if (tab.pid() > 0 || (tab.sessionId() != null && !tab.sessionId().isBlank())) {
+                        System.out.println("[RESTORE] " + p.getName()
+                            + (wt.isBlank() ? "" : " [" + new File(wt).getName() + "]")
+                            + " sub-" + tab.terminalSubId()
+                            + " — old PID " + tab.pid()
+                            + (tab.sessionId() != null && !tab.sessionId().isBlank()
+                                ? ", " + tab.sessionType() + " session: " + tab.sessionId()
+                                : ""));
+                    }
+                    String stype = tab.sessionType();
+                    String sid   = tab.sessionId();
+                    if (sid != null && !sid.isBlank()
+                            && ("opencode".equals(stype) || "copilot".equals(stype))) {
+                        com.conload.ui.projects.workspace.TerminalGroup g = projectTerminals.get(wsKey);
+                        if (g != null && tab.terminalSubId() < g.size()) {
+                            CopilotTerminalPane t = g.terminals().get(tab.terminalSubId());
+                            if (t != null) t.setPendingResumeSession(stype, sid);
+                        }
+                    }
                 }
             }
         }
@@ -442,6 +469,11 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
     /** Mount the file tree for the given project into the left pane (lazy cache).
      *  Returns the (cached) pane so callers can re-root its CODE tree to a
      *  specific workspace directory via {@link ProjectFilesPane#setCodeRoot(File)}. */
+
+    private String resolveWorkspaceSafe(Project p) {
+        try { return projectService.resolveWorkspace(p).toString(); }
+        catch (Exception ex) { return System.getProperty("user.home"); }
+    }
 
     protected ProjectFilesPane mountLeftPaneForProject(String projectId, String workDir) {
         if (leftPaneHost == null) return null;
@@ -470,6 +502,22 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
             treePane.setOnRefreshWorktrees(this::refreshWorktreesForActiveProject);
             treePane.setOnSelectWorktree(this::selectWorktree);
             treePane.setOnRemoveWorktree(this::removeWorktree);
+            treePane.setOnTaskBadgeClick(() -> {
+                if (searchResultsReady) {
+                    taskBadgeClickBackToResults(projectId);
+                } else {
+                    restorePromptWorkspace();
+                    ProjectFilesPane p = projectFilesPanes.get(projectId);
+                    if (p != null) p.hideTaskBadge();
+                }
+            });
+            treePane.setOnActivateTerminalSession((wtPath, subIdx) -> {
+                if (activeProjectId == null) return;
+                Project p = projectService.findById(activeProjectId);
+                if (p == null) return;
+                switchToWorkspace(p, wtPath);
+                activateTerminal(subIdx);
+            });
             // Sidebar header: project name + the project's animated character
             // (matches the project tab indicator robot/cat/alien/yoda).
             if (proj != null) treePane.setProjectName(proj.getName());
@@ -553,7 +601,40 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
         Theme.classes(wrapper, Theme.CL_BG_APP);
         VBox.setVgrow(downloadPane, Priority.ALWAYS);
         contentArea.getChildren().setAll(wrapper);
-        if (!isSearchRunning()) Platform.runLater(this::openSearchDialog);
+        if (!isSearchRunning() && !searchResultsReady) Platform.runLater(this::openSearchDialog);
+    }
+
+    /** Called when the user clicks the "Results ready" sidebar badge. Re-mounts
+     *  the cached download-context tab (with results visible) and hides the badge. */
+    private void taskBadgeClickBackToResults(String projectId) {
+        if (projectId == null || !projectId.equals(activeProjectId)) {
+            Project p = projectService.findById(projectId);
+            if (p != null) switchToProject(p);
+        }
+        if (sharedPromptPanel != null) sharedPromptPanel.collapsePrompt();
+        showDashboard();
+        if (centerStack != null) VBox.setVgrow(centerStack, Priority.ALWAYS);
+        if (terminalSection != null) VBox.setVgrow(terminalSection, Priority.NEVER);
+        if (terminalHost != null) VBox.setVgrow(terminalHost, Priority.NEVER);
+        if (contentArea != null && cachedDownloadPane != null) {
+            Button backBtn = new Button(Icons.BACK + " Back to Prompt");
+            backBtn.getStyleClass().add("link-button");
+            String backColor = projectColors.getOrDefault(projectId, ProjectColors.DEFAULT);
+            backBtn.setStyle("-fx-text-fill: " + backColor + ";");
+            backBtn.setOnAction(e -> restorePromptWorkspace());
+            Label contextTitle = new Label("Context Management");
+            contextTitle.getStyleClass().addAll("title", "small");
+            HBox headerPanel = new HBox(10, backBtn, contextTitle);
+            headerPanel.setAlignment(Pos.CENTER_LEFT);
+            headerPanel.setPadding(new Insets(4, 14, 4, 14));
+            headerPanel.getStyleClass().add("panel-border-bottom");
+            VBox wrapper = new VBox(0, headerPanel, cachedDownloadPane);
+            Theme.classes(wrapper, Theme.CL_BG_APP);
+            VBox.setVgrow(cachedDownloadPane, Priority.ALWAYS);
+            contentArea.getChildren().setAll(wrapper);
+        }
+        ProjectFilesPane pane = projectFilesPanes.get(projectId);
+        if (pane != null) pane.hideTaskBadge();
     }
 
 
@@ -892,6 +973,10 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
 
         CopilotTerminalPane terminal = terminalFactory.getOrCreate(project, wsKey, fworkDir);
 
+        // Bind the subtab strip to this workspace's terminal group.
+        com.conload.ui.projects.workspace.TerminalGroup group = projectTerminals.get(wsKey);
+        if (terminalSubtabStrip != null) terminalSubtabStrip.bind(group);
+
         // If this workspace has a durable (saved) session but no live one yet,
         // inject it as a one-click resume pill in the terminal bar (next to the
         // PID). No-op when a session is already active/pending. Base uses the
@@ -936,6 +1021,56 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
         saveOpenTabs();
         // Persist the selected worktree so re-opening the project restores it.
         projectService.setLastWorktreePath(projectId, wt);
+    }
+
+    /** Switches the active sub-terminal for the current workspace. */
+    protected void activateTerminal(int index) {
+        if (activeProjectId == null) return;
+        String wsKey = activeWorkspaceKey(activeProjectId);
+        TerminalGroup group = projectTerminals.get(wsKey);
+        if (group == null) return;
+        group.setActive(index);
+        CopilotTerminalPane terminal = group.active();
+        if (terminal != null && terminalHost != null) {
+            terminalHost.getChildren().setAll(terminal);
+            if (sharedPromptPanel != null) sharedPromptPanel.refreshActiveTerminal();
+            terminal.checkForOpencodeSessions();
+        }
+        if (terminalSubtabStrip != null) terminalSubtabStrip.refreshActive();
+        updateProjectTabStates();
+        saveOpenTabs();
+    }
+
+    /** Creates a new sub-terminal in the current workspace. */
+    protected void createNewTerminal() {
+        if (activeProjectId == null) return;
+        Project p = projectService.findById(activeProjectId);
+        if (p == null) return;
+        String wt = activeWorktreePath(activeProjectId);
+        String wsKey = workspaceKey(activeProjectId, wt);
+        String workDir = wt.isBlank() ? resolveWorkspaceSafe(p) : wt;
+        CopilotTerminalPane terminal = terminalFactory.createNew(p, wsKey, workDir);
+        TerminalGroup group = projectTerminals.get(wsKey);
+        if (terminalHost != null) terminalHost.getChildren().setAll(terminal);
+        if (terminalSubtabStrip != null) terminalSubtabStrip.bind(group);
+        if (sharedPromptPanel != null) sharedPromptPanel.refreshActiveTerminal();
+        saveOpenTabs();
+    }
+
+    /** Closes a sub-terminal within a group. */
+    protected void closeTerminal(TerminalGroup group, int index) {
+        if (group == null || index < 0 || index >= group.size()) return;
+        CopilotTerminalPane t = group.terminals().get(index);
+        if (t != null) t.closeTerminal();
+        group.remove(index);
+        CopilotTerminalPane active = group.active();
+        if (active != null && terminalHost != null) {
+            terminalHost.getChildren().setAll(active);
+            if (sharedPromptPanel != null) sharedPromptPanel.refreshActiveTerminal();
+        }
+        if (terminalSubtabStrip != null) terminalSubtabStrip.bind(group);
+        updateProjectTabStates();
+        saveOpenTabs();
     }
 
     /**
@@ -1039,7 +1174,7 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
                 String cur = activeWorktreePath(projectId);
                 if (cur == null || cur.isBlank()) cur = baseRepoPath;
                 final String currentPath = cur;
-                java.util.Map<String,String> labels = resolveWorktreeSessionLabels(projectId, wts, baseRepoPath);
+                java.util.Map<String, java.util.List<com.conload.ui.projects.sidebar.WorktreeSessionBadge.SessionInfo>> labels = resolveWorktreeSessionLabels(projectId, wts, baseRepoPath);
                 javafx.application.Platform.runLater(() -> {
                     pane.setWorktrees(wts, labels);
                     pane.setCurrentWorktreePath(currentPath);
@@ -1072,11 +1207,10 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
      * @param baseRepoPath the primary checkout's absolute path (its session
      *                    is stored under the project's {@code lastSession*})
      */
-    private java.util.Map<String,String> resolveWorktreeSessionLabels(
+    private java.util.Map<String, java.util.List<com.conload.ui.projects.sidebar.WorktreeSessionBadge.SessionInfo>> resolveWorktreeSessionLabels(
             String projectId, java.util.List<Worktree> worktrees, String baseRepoPath) {
-        java.util.Map<String,String> labels = new java.util.HashMap<>();
+        java.util.Map<String, java.util.List<com.conload.ui.projects.sidebar.WorktreeSessionBadge.SessionInfo>> labels = new java.util.HashMap<>();
         if (worktrees == null) return labels;
-        // Load the opencode sessions cache once for id→title resolution.
         java.util.Map<String,String> idToTitle = new java.util.HashMap<>();
         try {
             for (com.conload.model.OpencodeSession s : new com.conload.service.OpencodeSessionService().loadCachedSessions()) {
@@ -1089,45 +1223,47 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
             if (wtPath == null || wtPath.isBlank()) continue;
             boolean isBase = w.isPrimary() || wtPath.equals(baseRepoPath);
             String wsKey = isBase ? baseKey(projectId) : workspaceKey(projectId, wtPath);
-            // 1) Live terminal session.
-            CopilotTerminalPane t = projectTerminals.get(wsKey);
-            if (t != null) {
-                String sid = t.getSessionId();
-                if (sid != null && !sid.isBlank()) {
-                    String stype = t.getSessionType();
-                    String title = t.sessionTitleProperty().get();
-                    if ((title == null || title.isBlank())) title = idToTitle.get(sid);
-                    labels.put(wtPath, SessionFolderFiles.formatLabel(stype, title, sid));
-                    continue;
+            java.util.List<com.conload.ui.projects.sidebar.WorktreeSessionBadge.SessionInfo> infos = new java.util.ArrayList<>();
+            TerminalGroup group = projectTerminals.get(wsKey);
+            if (group != null) {
+                for (int i = 0; i < group.size(); i++) {
+                    CopilotTerminalPane t = group.terminals().get(i);
+                    String sid = t.getSessionId();
+                    if (sid != null && !sid.isBlank()) {
+                        String title = t.sessionTitleProperty().get();
+                        if (title == null || title.isBlank()) title = idToTitle.get(sid);
+                        infos.add(new com.conload.ui.projects.sidebar.WorktreeSessionBadge.SessionInfo(
+                                i, sid, t.getSessionType(), title));
+                    } else {
+                        infos.add(new com.conload.ui.projects.sidebar.WorktreeSessionBadge.SessionInfo(
+                                i, "", "", ""));
+                    }
                 }
             }
-            // 2) Durable fallback.
-            String encoded;
-            if (isBase) {
-                Project proj = projectService.findById(projectId);
-                if (proj == null) continue;
-                String lt = proj.getLastSessionType();
-                String li = proj.getLastSessionId();
-                if (li == null || li.isBlank()) continue;
-                encoded = lt + ":" + li;
-            } else {
-                encoded = projectService.getWorktreeSession(projectId, wtPath);
+            if (infos.isEmpty()) {
+                // Durable fallback (sub-terminal 0 only).
+                String encoded;
+                if (isBase) {
+                    Project proj = projectService.findById(projectId);
+                    if (proj == null) continue;
+                    String li = proj.getLastSessionId();
+                    if (li == null || li.isBlank()) continue;
+                    encoded = proj.getLastSessionType() + ":" + li;
+                } else {
+                    encoded = projectService.getWorktreeSession(projectId, wtPath);
+                }
+                if (encoded == null || encoded.isBlank()) continue;
+                String[] parts = ProjectService.decodeWorktreeSession(encoded);
+                String stype = parts[0]; String sid = parts[1];
+                if (sid.isBlank()) continue;
+                infos.add(new com.conload.ui.projects.sidebar.WorktreeSessionBadge.SessionInfo(
+                        0, sid, stype, idToTitle.get(sid)));
             }
-            if (encoded == null || encoded.isBlank()) continue;
-            String[] parts = ProjectService.decodeWorktreeSession(encoded);
-            String stype = parts[0];
-            String sid   = parts[1];
-            if (sid.isBlank()) continue;
-            String title = idToTitle.get(sid);
-            labels.put(wtPath, SessionFolderFiles.formatLabel(stype, title, sid));
+            labels.put(wtPath, infos);
         }
         return labels;
     }
 
-    /** Lightweight refresh of the worktree session pills for a project (no git
-     *  commands — re-resolves labels from live terminals + durable data).
-     *  Called from {@link #updateProjectTabStates()} so pills update when a
-     *  session is detected/resumed without re-running {@code git worktree list}. */
     private void refreshWorktreeSessionLabels(String projectId) {
         if (projectId == null) return;
         ProjectFilesPane pane = projectFilesPanes.get(projectId);
@@ -1135,18 +1271,14 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
         Project project = projectService.findById(projectId);
         if (project == null) return;
         final Path repoDir = baseRepoDir(project);
-        // Re-resolve from the pane's current worktree items (no git) — we can't
-        // read the ListView items directly (JavaFX thread), so re-list on a
-        // background thread (read-only, fast) and just update labels on FX.
         BackgroundTasks.runIOTask("wt-session-refresh", () -> {
             try {
                 java.util.List<Worktree> wts = gitWorktreeService.listWorktrees(repoDir);
-                java.util.Map<String,String> labels =
+                java.util.List<com.conload.ui.projects.sidebar.WorktreeSessionBadge.SessionInfo> unused = new java.util.ArrayList<>();
+                java.util.Map<String, java.util.List<com.conload.ui.projects.sidebar.WorktreeSessionBadge.SessionInfo>> labels =
                         resolveWorktreeSessionLabels(projectId, wts, repoDir.toString());
                 javafx.application.Platform.runLater(() -> pane.updateWorktreeSessions(labels));
-            } catch (Exception e) {
-                // Non-fatal: session pills just don't refresh this cycle.
-            }
+            } catch (Exception e) { }
         });
     }
     /** One-click switch to a worktree row (the primary row switches to base). */
@@ -1226,8 +1358,8 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
             }
             javafx.application.Platform.runLater(() -> {
                 String wsKey = workspaceKey(projectId, w.getPath());
-                CopilotTerminalPane tp = projectTerminals.remove(wsKey);
-                if (tp != null) tp.closeTerminal();
+                com.conload.ui.projects.workspace.TerminalGroup grp = projectTerminals.remove(wsKey);
+                if (grp != null) for (CopilotTerminalPane tp : grp.terminals()) tp.closeTerminal();
                 if (w.getPath().equals(activeWorktreePath(projectId))) {
                     switchToWorkspace(project, "");
                 }

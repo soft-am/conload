@@ -70,6 +70,9 @@ public abstract class ContextAcquisitionController extends ManagementScreensCont
     /** Project id captured at search start so the sidebar badge stays on the
      *  originating project's pane even if the user switches projects mid-search. */
     private String searchProjectId;
+    /** True when search has completed with results visible (badge shows
+     *  "Results ready" and re-entry preserves results instead of clearing). */
+    protected boolean searchResultsReady;
     /** Cached download-tab region — rebuilt only once, re-attached on re-entry. */
     protected Region cachedDownloadPane;
     // ── Main-tab holders (results + download-btn row move into the popup, then back) ──
@@ -242,16 +245,19 @@ public abstract class ContextAcquisitionController extends ManagementScreensCont
     private void setSearching(boolean searching) {
         if (searching) {
             searchProjectId = activeProjectId;
+            searchResultsReady = false;
             closeSearchPopup();
-            if (mainShell != null && mainResultsScroll != null)
-                mainShell.setCenter(mainResultsScroll);
+            if (searchContextBtn != null) UiFactory.hide(searchContextBtn);
+            if (mainShell != null && downloadProgressPane != null)
+                mainShell.setCenter(downloadProgressPane.searchInProgressView());
             downloadProgressPane.setSearching(true);
             showSearchCriteriaInfo();
             ProjectFilesPane badgePane = searchProjectId == null ? null
                     : projectFilesPanes.get(searchProjectId);
-            if (badgePane != null) badgePane.showTaskBadge("Searching…");
+            if (badgePane != null) badgePane.showTaskBadge("Searching…", true);
         } else {
             downloadProgressPane.setSearching(false);
+            if (searchContextBtn != null) UiFactory.show(searchContextBtn);
             ProjectFilesPane badgePane = searchProjectId == null ? null
                     : projectFilesPanes.get(searchProjectId);
             if (badgePane != null) badgePane.hideTaskBadge();
@@ -276,12 +282,17 @@ public abstract class ContextAcquisitionController extends ManagementScreensCont
     }
 
     /** Stops the search-progress presentation and ensures the results container
-     *  is visible in the main panel. */
+     *  is visible in the main panel. Keeps a "Results ready" badge (no spinner)
+     *  on the sidebar so the user can navigate back to this screen. */
     private void finalizeResults() {
         setSearching(false);
         if (mainShell != null && mainResultsScroll != null)
             mainShell.setCenter(mainResultsScroll);
-        updateSaveButtonState();
+        if (downloadBtnRow != null) UiFactory.show(downloadBtnRow);
+        searchResultsReady = true;
+        ProjectFilesPane badgePane = searchProjectId == null ? null
+                : projectFilesPanes.get(searchProjectId);
+        if (badgePane != null) badgePane.showTaskBadge(Icons.CHECK + " Search results ready", false);
     }
 
     /** Hides the search popup (if open). The popup is criteria-entry-only; it
@@ -657,6 +668,7 @@ public abstract class ContextAcquisitionController extends ManagementScreensCont
 
     protected void clearSearchState() {
         if (isSearchRunning()) return;
+        searchResultsReady = false;
         // 1. Clear criteria rows
         activeCriteria.clear();
         if (searchCriteriaPane != null) searchCriteriaPane.clear();

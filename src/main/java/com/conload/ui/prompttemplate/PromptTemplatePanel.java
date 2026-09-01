@@ -59,6 +59,7 @@ public class PromptTemplatePanel extends VBox {
     private SpeechMicButton micButton;
     private Button sendBtn;
     private Button expandPromptBtn;
+    private Button copyPromptBtn;
 
     private VBox selectionsListBox;
     /**
@@ -282,7 +283,7 @@ public class PromptTemplatePanel extends VBox {
 
     private void buildUI() {
         buildTemplateHeader();
-        buildSelectionsBar();
+      //  buildSelectionsBar();
         buildPromptEditor();
         buildPickerStatusBar();
         buildPromptEditorOverlay();
@@ -372,9 +373,12 @@ public class PromptTemplatePanel extends VBox {
         promptTextArea.setPrefHeight(300);
         promptTextArea.setPromptText("Prompt text will appear here...");
         promptTextArea.getStyleClass().addAll("input", "text-area");
-        // Send button enabled only when there is text to send.
-        promptTextArea.textProperty().addListener((obs, o, n) ->
-            sendBtn.setDisable(n == null || n.trim().isEmpty()));
+        // Send + Copy buttons enabled only when there is text.
+        promptTextArea.textProperty().addListener((obs, o, n) -> {
+            boolean empty = n == null || n.trim().isEmpty();
+            sendBtn.setDisable(empty);
+            if (copyPromptBtn != null) copyPromptBtn.setDisable(empty);
+        });
 
         // ── Right-click context menu: Add context ──
         ContextMenu contextMenu = new ContextMenu();
@@ -407,6 +411,12 @@ public class PromptTemplatePanel extends VBox {
 
     private void buildPromptEditorOverlay() {
         expandPromptBtn = buildExpandPromptBtn();
+        // ── Copy button ──
+        copyPromptBtn = UiFactory.actionButton("Copy");
+        copyPromptBtn.getStyleClass().addAll("prompt-action-btn");
+        copyPromptBtn.setTooltip(new Tooltip("Copy prompt to clipboard"));
+        copyPromptBtn.setDisable(true);
+        copyPromptBtn.setOnAction(e -> copyPromptToClipboard());
         // ── Clear button ──
         Button clearBtn = UiFactory.actionButton("Clear");
         clearBtn.getStyleClass().addAll("prompt-action-btn", "danger");
@@ -418,9 +428,9 @@ public class PromptTemplatePanel extends VBox {
             promptTextArea.clear();
         });
 
-        // ── Action overlay: Expand + Clear + Send + Close, floating in the top-right
+        // ── Action overlay: Expand + Send + Copy + Clear + Close, floating in the top-right
         //    corner of the prompt text area. ──
-        HBox textActionOverlay = new HBox(4, expandPromptBtn, sendBtn, clearBtn,  collapseToggleBtn);
+        HBox textActionOverlay = new HBox(4, expandPromptBtn, sendBtn, copyPromptBtn, clearBtn,  collapseToggleBtn);
         textActionOverlay.setAlignment(Pos.TOP_RIGHT);
         textActionOverlay.setPickOnBounds(false);
         textActionOverlay.getStyleClass().add("prompt-action-overlay");
@@ -756,6 +766,13 @@ public class PromptTemplatePanel extends VBox {
         if (text.isEmpty()) return;
         String escaped = text.replace("'", "'\\''");
         terminalSender.accept("'" + escaped + "'\n");
+    }
+
+    private void copyPromptToClipboard() {
+        String text = promptTextArea.getText();
+        if (text == null || text.isEmpty()) return;
+        javafx.scene.input.Clipboard.getSystemClipboard().setContent(
+                java.util.Map.of(javafx.scene.input.DataFormat.PLAIN_TEXT, text));
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

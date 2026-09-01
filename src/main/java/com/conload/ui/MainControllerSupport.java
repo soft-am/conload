@@ -8,6 +8,8 @@ import com.conload.ui.prompttemplate.PromptTemplatePanel;
 import com.conload.ui.prompttemplate.QuickActionsBar;
 import com.conload.ui.terminal.CopilotTerminalPane;
 import com.conload.ui.terminal.RobotIndicator;
+import com.conload.ui.projects.workspace.TerminalGroup;
+import com.conload.ui.projects.workspace.TerminalSubtabStrip;
 import com.conload.ui.projects.ProjectFilesPane;
 
 import com.conload.confluence.ConfluenceUrlParser;
@@ -214,10 +216,11 @@ public abstract class MainControllerSupport {
     protected final PidRegistryService pidRegistry = new PidRegistryService();
     /** Orchestrates search and download operations off the JavaFX thread. */
     protected final SearchDownloadService searchDownloadService = new SearchDownloadService();
-    /** One terminal pane per workspace key (projectId for the base workspace,
-     *  or {@code projectId + "\u0001" + worktreePath} for a git worktree) —
-     *  created lazily, kept alive until the project tab is closed. */
-    protected final Map<String, CopilotTerminalPane> projectTerminals = new HashMap<>();
+    /** Terminal groups per workspace key (projectId for the base workspace,
+     *  or {@code projectId + "\u0001" + worktreePath} for a git worktree).
+     *  Each group holds N terminals (sub-tabs); created lazily, kept alive
+     *  until the project tab is closed. */
+    protected final Map<String, TerminalGroup> projectTerminals = new HashMap<>();
     /** Per-project identity color (hex string) — assigned when a project is first opened. */
     protected final Map<String, String> projectColors = new HashMap<>();
     /** Per-project animated character (robot/cat/alien/yoda) — picked at random
@@ -241,6 +244,8 @@ public abstract class MainControllerSupport {
     protected QuickActionsBar sharedQuickActionsBar;
     protected StackPane terminalHost;
     protected VBox terminalSection;
+    /** Subtab strip above terminalHost (hidden when ≤1 terminal per workspace). */
+    protected TerminalSubtabStrip terminalSubtabStrip;
     /** Horizontal separator between the quick actions bar and the terminal.
      *  Tinted in the active project's accent color (see .qa-terminal-separator). */
     protected javafx.scene.control.Separator terminalSeparator;
@@ -310,6 +315,12 @@ public abstract class MainControllerSupport {
         return workspaceKey(projectId, activeWorktreePath(projectId));
     }
 
+    /** Resolves the active sub-terminal for a workspace key, or null. */
+    protected CopilotTerminalPane activeTerminal(String wsKey) {
+        TerminalGroup g = projectTerminals.get(wsKey);
+        return g != null ? g.active() : null;
+    }
+
     // =========================================================================
     // Open-tabs persistence
     // =========================================================================
@@ -320,22 +331,27 @@ public abstract class MainControllerSupport {
     public void saveOpenTabs() {
         List<OpenTabsService.OpenTab> tabs = new ArrayList<>();
         for (String id : openProjectIds) {
-            for (Map.Entry<String, CopilotTerminalPane> e : projectTerminals.entrySet()) {
+            for (Map.Entry<String, TerminalGroup> e : projectTerminals.entrySet()) {
                 if (!id.equals(keyProjectId(e.getKey()))) continue;
-                CopilotTerminalPane t = e.getValue();
+                TerminalGroup g = e.getValue();
                 String wt = keyWorktreePath(e.getKey());
-                long pid = (t != null) ? t.getPid() : -1;
-                String sid = (t != null) ? t.getSessionId() : "";
-                String stype = (t != null) ? t.getSessionType() : "";
-                tabs.add(OpenTabsService.of(id, wt, pid, sid, stype));
-                // Mirror the live session into the durable Project record so
-                // it survives a tab close/restart. Base → lastSession*; a
-                // worktree → the per-worktree session map. Only persisted for
-                // non-blank ids (blank leaves the field untouched so a
-                // transient empty state doesn't clobber a known session).
-                if (sid != null && !sid.isBlank()) {
-                    if (wt.isBlank()) projectService.updateLastSession(id, stype, sid);
-                    else projectService.updateWorktreeSession(id, wt, stype, sid);
+                for (int i = 0; i < g.size(); i++) {
+                    CopilotTerminalPane t = g.terminals().get(i);
+                    long pid = (t != null) ? t.getPid() : -1;
+                    String sid = (t != null) ? t.getSessionId() : "";
+                    String stype = (t != null) ? t.getSessionType() : "";
+                    tabs.add(OpenTabsService.of(id, wt, pid, sid, stype, i));
+                }
+                // Mirror the live session of sub-terminal 0 into the durable
+                // Project record so it survives a tab close/restart. Base →
+                // lastSession*; a worktree → the per-worktree session map.
+                CopilotTerminalPane t0 = g.active();
+                if (t0 != null) {
+                    String sid = t0.getSessionId();
+                    if (sid != null && !sid.isBlank()) {
+                        if (wt.isBlank()) projectService.updateLastSession(id, t0.getSessionType(), sid);
+                        else projectService.updateWorktreeSession(id, wt, t0.getSessionType(), sid);
+                    }
                 }
             }
         }
@@ -363,10 +379,11 @@ public abstract class MainControllerSupport {
             System.err.println("[SHUTDOWN] saveOpenTabs failed: " + e.getMessage());
         }
         // Destroy every live PTY (no UI ops → shutdown-hook safe). Copy the
-        // values first to avoid ConcurrentModification if a listener re-enters.
-        java.util.List<CopilotTerminalPane> panes;
+        // terminals first to avoid ConcurrentModification if a listener re-enters.
+        java.util.List<CopilotTerminalPane> panes = new java.util.ArrayList<>();
         synchronized (projectTerminals) {
-            panes = new java.util.ArrayList<>(projectTerminals.values());
+            for (TerminalGroup g : projectTerminals.values())
+                panes.addAll(g.terminals());
         }
         for (CopilotTerminalPane t : panes) {
             try {

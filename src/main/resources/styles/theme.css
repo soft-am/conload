@@ -720,8 +720,16 @@
 /* ══ COMPONENT-SPECIFIC RULES ══════════════════════════════════════════ */
 .icon { -fx-font-size: -app-icon-size; }
 .panel-border-left { -fx-border-color: -divider-primary; -fx-border-width: 0 1 0 0; }
-.terminal-section { -fx-background-color: -c-terminal-glass; }
-.terminal-bar-session { -fx-padding: 2 8 2 8; -fx-background-radius: 4; -fx-border-radius: 4; }
+.terminal-section { -fx-background-color: transparent; }
+.terminal-bar-session { -fx-padding: 5 8 5 8; -fx-background-radius: 4; -fx-border-radius: 4; }
+.terminal-subtab-strip { -fx-background-color: -c-terminal-glass; -fx-border-color: -divider-primary; -fx-border-width: 0 0 1 0; }
+.terminal-subtab { -fx-font-size: 11;  -fx-cursor: hand; }
+.terminal-subtab.active { -fx-text-fill: -accent-color; -fx-border-color: -accent-color; }
+.terminal-subtab.busy { -fx-font-weight: bold; }
+.subtab-close { -fx-font-size: 9; -fx-text-fill: -app-muted; -fx-padding: 0 2 2 2;  -fx-background-color: transparent; }
+.subtab-close:hover { -fx-text-fill: -app-danger; -fx-cursor: hand; }
+.terminal-subtab-add { -fx-font-size: 12; }
+
 .terminal-meta-group { -fx-background-color: derive(-app-panel, -5%); -fx-padding: 3 6 3 6; }
 .card { -fx-padding: 12; }
 .hint-padded { -fx-padding: 12; -fx-text-alignment: center; }
@@ -757,7 +765,7 @@
 .search-context-btn { -fx-padding: 8 16 8 16; }
 .search-context-btn:hover { -fx-border-color: -app-success; }
 .download-spinner { -fx-progress-color: -accent-color; -fx-max-size: 14; -fx-min-size: 14; -fx-pref-size: 14; }
-.task-badge-box { -fx-border-radius: 10; -fx-background-radius: 10; -fx-padding: 2 8 2 6; -fx-alignment: center-left; }
+.task-badge-box { -fx-border-radius: 10; -fx-background-radius: 10; -fx-padding: 2 8 2 6; -fx-alignment: center-left; -fx-cursor: hand; }
 .link-button { -fx-padding: 4 8 4 0; -fx-underline: false; }
 .link-button:hover { -fx-underline: true; }
 .tab-close { -fx-padding: 0 4 0 4; }
@@ -792,6 +800,10 @@
 .app-button:hover .zoom-seg { -fx-fill: -app-text; }
 .app-button.accent .zoom-seg { -fx-fill: -accent-color; }
 .app-button.danger .zoom-seg { -fx-fill: -app-error; }
+.app-button .cross-context-seg { -fx-fill: -app-muted; }
+.app-button:hover .cross-context-seg { -fx-fill: -app-text; }
+.app-button.accent .cross-context-seg { -fx-fill: -accent-color; }
+.prompt-template-row .cross-context-seg { -fx-fill: -accent-color; }
 .brand-logo-btn { -fx-padding: 2 2 2 2; -fx-content-display: graphic-only; }
 .focus-working-text { -fx-font-size: -font-hero; -fx-font-family: "SF Pro Text", "Inter", "Roboto", "Helvetica Neue", "Arial", sans-serif; }
 .focus-show-btn { -fx-padding: 8 24 8 24; }
@@ -957,6 +969,7 @@
 .dialog-pane .button { -fx-padding: 7 16; }
 .context-menu { -fx-effect: dropshadow(three-pass-box, -c-shadow, 8, 0, 0, 2); }
 .menu-item { -fx-padding: 5 12 5 12; }
+.worktree-session-menu-item { -fx-padding: 8 14 8 14; }
 .tooltip { -fx-padding: 4 8 4 8; }
 .popup-window-root { -fx-background-color: radial-gradient(center 50% 70%, radius 110%, -bg-stop-1 0%, -bg-stop-2 60%, -bg-stop-3 100%); -fx-border-width: 1.5; }
 .popup-window-root .field-label { -fx-padding: 6 0 2 0; }

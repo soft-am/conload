@@ -6,6 +6,8 @@ import com.conload.ui.components.AboutPanel;
 import com.conload.ui.components.WelcomeGuidePopup;
 import com.conload.ui.projects.ProjectFilesPane;
 import com.conload.ui.projects.ProjectWorkspaceController;
+import com.conload.ui.projects.workspace.TerminalSubtabStrip;
+import com.conload.ui.terminal.CopilotTerminalPane;
 import com.conload.ui.prompttemplate.PromptTemplatePanel;
 import com.conload.ui.prompttemplate.QuickActionsBar;
 import com.conload.ui.shell.FocusModeController;
@@ -35,6 +37,9 @@ public class AppShellController extends ProjectWorkspaceController {
     private final FocusModeController focusModeController;
     /** Red banner shown at the top of the app while config is incomplete. */
     private HBox configBanner;
+    /** The banner's body label, updated by {@link #refreshConfigBanner()} with
+     *  the names of whichever required settings are still missing. */
+    private Label configBannerText;
 
     // ── Speech-to-text (Vosk) ──────────────────────────────────────────────────
     // (speechService moved to MainControllerSupport — shared across terminal panes)
@@ -142,36 +147,67 @@ public class AppShellController extends ProjectWorkspaceController {
     private HBox buildConfigBanner() {
         Label icon = new Label(Icons.WARNING);
         icon.getStyleClass().add("config-banner-icon");
-        Label text = new Label("Configuration incomplete — not all required settings (*) are set. "
-                + "Search, download, and workflows are disabled until setup is finished.");
-        text.getStyleClass().add("config-banner-text");
-        text.setWrapText(true);
-        HBox.setHgrow(text, Priority.ALWAYS);
+        configBannerText = new Label(defaultBannerText());
+        configBannerText.getStyleClass().add("config-banner-text");
+        configBannerText.setWrapText(true);
+        HBox.setHgrow(configBannerText, Priority.ALWAYS);
         Button openBtn = UiFactory.actionButton("Open Settings");
         openBtn.setOnAction(e -> showPanel("CONFIG"));
-        HBox banner = new HBox(10, icon, text, openBtn);
+        HBox banner = new HBox(10, icon, configBannerText, openBtn);
         banner.getStyleClass().add("config-banner");
         banner.setAlignment(Pos.CENTER_LEFT);
         UiFactory.hide(banner);
         return banner;
     }
 
-    /** True when every mandatory config field is present: Atlassian email/token,
-     *  root URL, GitHub token, default export folder, and full Confluence folder. */
-    private boolean isConfigFullySet() {
+    /** Returns a human-readable list of mandatory config settings that are
+     *  still blank/missing, checked against the same on-disk sources used by
+     *  {@link #saveConfig()}: {@code ~/.conload/config.txt} (email, Atlassian
+     *  token, root URL, GitHub token, default export folder) and
+     *  {@code ~/.conload/workflow-settings.json} (full Confluence folder).
+     *  Empty list = setup complete. Single source of truth for the banner and
+     *  the welcome guide. */
+    private java.util.List<String> missingConfigFields() {
         AppConfig cfg = configService.loadConfig();
-        if (!cfg.isValid()) return false;
-        if (cfg.getBaseUrl().isBlank()) return false;
-        if (cfg.getGithubToken().isBlank()) return false;
-        if (cfg.getDefaultExportFolder().isBlank()) return false;
-        return !new com.conload.workflow.WorkflowSettingsService().getFullConfluenceFolder().isBlank();
+        java.util.List<String> missing = new java.util.ArrayList<>();
+        if (cfg.getUsername().isBlank()) missing.add("Email / username");
+        if (cfg.getToken().isBlank()) missing.add("Atlassian API token");
+        if (cfg.getBaseUrl().isBlank()) missing.add("Atlassian root URL");
+        if (cfg.getGithubToken().isBlank()) missing.add("GitHub token");
+        if (cfg.getDefaultExportFolder().isBlank()) missing.add("Default export folder");
+        if (new com.conload.workflow.WorkflowSettingsService().getFullConfluenceFolder().isBlank())
+            missing.add("Full Confluence folder");
+        return missing;
+    }
+
+    /** True when every mandatory config field is present. Delegates to
+     *  {@link #missingConfigFields()} so there is one source of truth. */
+    private boolean isConfigFullySet() {
+        return missingConfigFields().isEmpty();
+    }
+
+    /** Default banner text shown before the first refresh (generic message;
+     *  replaced with the specific missing-field list once config is loaded). */
+    private static String defaultBannerText() {
+        return "Configuration incomplete — not all required settings (*) are set. "
+                + "Search, download, and workflows are disabled until setup is finished.";
     }
 
     /** Show or hide the red top banner based on the current config state.
-     *  Called at startup (after autoLoadConfig) and after Save. */
+     *  When settings are missing, the banner names which ones. Called at
+     *  startup (after autoLoadConfig) and after Save. */
     private void refreshConfigBanner() {
         if (configBanner == null) return;
-        UiFactory.setVisible(configBanner, !isConfigFullySet());
+        java.util.List<String> missing = missingConfigFields();
+        if (missing.isEmpty()) {
+            UiFactory.setVisible(configBanner, false);
+        } else {
+            String detail = "Configuration incomplete — missing: "
+                    + String.join(", ", missing)
+                    + ". Search, download, and workflows are disabled until setup is finished.";
+            configBannerText.setText(detail);
+            UiFactory.setVisible(configBanner, true);
+        }
     }
 
     private VBox buildTerminalSection() {
@@ -183,7 +219,12 @@ public class AppShellController extends ProjectWorkspaceController {
         terminalHint.getStyleClass().addAll("hint");
         terminalHost.getChildren().setAll(terminalHint);
 
-        VBox terminalSection = new VBox(terminalHost);
+        terminalSubtabStrip = new TerminalSubtabStrip(
+                i -> activateTerminal(i),
+                () -> createNewTerminal(),
+                (group, i) -> closeTerminal(group, i));
+
+        VBox terminalSection = new VBox(terminalSubtabStrip, terminalHost);
         terminalSection.getStyleClass().add("terminal-section");
         VBox.setVgrow(terminalSection, Priority.ALWAYS);
         this.terminalSection = terminalSection;
@@ -228,7 +269,7 @@ public class AppShellController extends ProjectWorkspaceController {
                 this::sendToActiveTerminal,
                 () -> { if (sharedQuickActionsBar != null) sharedQuickActionsBar.refresh(); },
                 speechService,
-                () -> projectTerminals.get(activeProjectId));
+                () -> activeTerminal(activeWorkspaceKey(activeProjectId)));
         sharedPromptPanel.setOnPickerModeChanged(active ->
                 projectFilesPanes.values().forEach(pane -> pane.setPickerMode(active)));
         sharedPromptPanel.setOnPromptExpandChanged(this::resizePromptWorkspace);
@@ -392,6 +433,16 @@ public class AppShellController extends ProjectWorkspaceController {
             }
             @Override public javafx.stage.Window ownerWindow() {
                 return stage;
+            }
+            @Override public void showTaskBadge(String label, boolean spin) {
+                if (activeProjectId == null) return;
+                com.conload.ui.projects.ProjectFilesPane pane = projectFilesPanes.get(activeProjectId);
+                if (pane != null) pane.showTaskBadge(label, spin);
+            }
+            @Override public void hideTaskBadge() {
+                if (activeProjectId == null) return;
+                com.conload.ui.projects.ProjectFilesPane pane = projectFilesPanes.get(activeProjectId);
+                if (pane != null) pane.hideTaskBadge();
             }
         };
     }
@@ -565,11 +616,16 @@ public class AppShellController extends ProjectWorkspaceController {
     protected void saveConfig() {
         String base = baseUrlConfigField.getText().strip().replaceAll("/$", "");
         String ghApi = githubApiUrlField.getText().strip().replaceAll("/$", "");
+        String exportFolder = defaultExportFolderField.getText().strip();
+        if (exportFolder.isBlank()) {
+            exportFolder = System.getProperty("user.home") + "/conload-exports";
+            defaultExportFolderField.setText(exportFolder);
+        }
         AppConfig config = new AppConfig(
                 usernameField.getText().strip(), tokenField.getText().strip(),
                 base, githubTokenField.getText().strip(),
                 ghApi,
-                defaultExportFolderField.getText().strip(),
+                exportFolder,
                 shellField.getText().strip(), collectCliTypes());
         try {
             configService.saveConfig(config);

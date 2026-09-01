@@ -141,7 +141,7 @@ public class CopilotTerminalPane extends VBox {
         if(!terminalOnlyMode){quickActionsBar=new QuickActionsBar(this::sendInput); promptTemplatePanel=new PromptTemplatePanel(this::sendInput,()->quickActionsBar.refresh()); promptTemplatePanel.setWorkDir(new File(folderLabel.getText()));}
         VBox right=terminalOnlyMode?new VBox(webView):new VBox(quickActionsBar,promptTemplatePanel,webView); VBox.setVgrow(right,Priority.ALWAYS); getChildren().addAll(bar,right);
     }
-    private String sessionLabel(){String id=pendingId.get().isBlank()?sessionProperty.get():pendingId.get();if(id.isBlank())return "";String type=pendingId.get().isBlank()?sessions.type():pendingType.get();CliTypeDefinition d=sessions.findByType(type);String label=d!=null?d.getLabel():type;if(label.isBlank())label="session";return sessionTitle.get().isBlank()?label:label+":"+sessionTitle.get();}
+    public String sessionLabel(){String id=pendingId.get().isBlank()?sessionProperty.get():pendingId.get();if(id.isBlank())return "";String type=pendingId.get().isBlank()?sessions.type():pendingType.get();CliTypeDefinition d=sessions.findByType(type);String label=d!=null?d.getLabel():type;if(label.isBlank())label="session";return sessionTitle.get().isBlank()?label:label+":"+sessionTitle.get();}
     private void terminalReady(){
         openBtn.setDisable(false);
         Platform.runLater(() -> {

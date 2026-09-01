@@ -44,4 +44,12 @@ public interface WorkflowHost {
 
     /** The main app window, used to center the workflow dialog. */
     Window ownerWindow();
+
+    /** Show a sidebar task badge on the active project's pane.
+     *  @param label short status text
+     *  @param spin  {@code true} to show the spinner (in-progress), {@code false} for static */
+    default void showTaskBadge(String label, boolean spin) {}
+
+    /** Hide the sidebar task badge on the active project's pane. */
+    default void hideTaskBadge() {}
 }

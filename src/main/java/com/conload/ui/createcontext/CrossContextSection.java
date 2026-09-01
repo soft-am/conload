@@ -2,6 +2,7 @@ package com.conload.ui.createcontext;
 
 import com.conload.ui.Icons;
 import com.conload.ui.Theme;
+import com.conload.ui.components.CrossContextIcon;
 import com.conload.ui.components.UiFactory;
 import com.conload.ui.workflow.CrossContextRunner;
 import com.conload.ui.workflow.CrossSource;
@@ -13,6 +14,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.TextField;
@@ -112,6 +114,8 @@ public final class CrossContextSection {
         UiFactory.hide(spinner);
         UiFactory.hide(stopBtn);
 
+        gatherBtn.setGraphic(new CrossContextIcon(16));
+        gatherBtn.setContentDisplay(ContentDisplay.LEFT);
         gatherBtn.setOnAction(e -> startGather());
         stopBtn.setOnAction(e -> runner.stop());
 

@@ -28,10 +28,12 @@ public class OpenTabsService {
             @JsonProperty("worktreePath") String worktreePath,
             @JsonProperty("pid") long pid,
             @JsonProperty("sessionId") String sessionId,
-            @JsonProperty("sessionType") String sessionType
+            @JsonProperty("sessionType") String sessionType,
+            @JsonProperty("terminalSubId") int terminalSubId
     ) {
         // Compact constructor: normalise nulls so old open_tabs.json files
-        // (which lack the worktreePath field) load as the base workspace.
+        // (which lack worktreePath/terminalSubId) load as the base workspace
+        // sub-terminal 0.
         public OpenTab {
             worktreePath = worktreePath != null ? worktreePath : "";
             sessionId    = sessionId    != null ? sessionId    : "";
@@ -40,19 +42,27 @@ public class OpenTabsService {
     }
 
     /** Convenience constructor for callers using the base workspace
-     *  (worktreePath = ""). */
+     *  (worktreePath = "") sub-terminal 0. */
     public static OpenTab of(String projectId, long pid, String sessionId, String sessionType) {
-        return of(projectId, "", pid, sessionId, sessionType);
+        return of(projectId, "", pid, sessionId, sessionType, 0);
     }
 
-    /** Convenience constructor specifying a worktree path (blank = base). */
+    /** Convenience constructor specifying a worktree path (blank = base),
+     *  sub-terminal 0. */
     public static OpenTab of(String projectId, String worktreePath, long pid,
                              String sessionId, String sessionType) {
+        return of(projectId, worktreePath, pid, sessionId, sessionType, 0);
+    }
+
+    /** Full constructor with sub-terminal id. */
+    public static OpenTab of(String projectId, String worktreePath, long pid,
+                             String sessionId, String sessionType, int terminalSubId) {
         return new OpenTab(projectId,
                 worktreePath != null ? worktreePath : "",
                 pid,
                 sessionId != null ? sessionId : "",
-                sessionType != null ? sessionType : "");
+                sessionType != null ? sessionType : "",
+                terminalSubId);
     }
 
     /** Save the list of open tabs to disk. */

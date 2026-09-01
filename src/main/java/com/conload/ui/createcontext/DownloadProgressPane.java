@@ -35,6 +35,7 @@ public final class DownloadProgressPane {
     private final TextArea logArea = new TextArea();
     private final TitledPane logPane;
     private final VBox inProgressView;
+    private final VBox searchInProgressView;
     private final BooleanSupplier hasResults;
     private final ProgressBar searchProgressBar = new ProgressBar();
     private final Label searchStatusLabel = new Label("");
@@ -76,6 +77,7 @@ public final class DownloadProgressPane {
         logPane.getStyleClass().add("progress-log-pane");
         VBox.setVgrow(logPane, Priority.NEVER);
         inProgressView = buildInProgressView();
+        searchInProgressView = buildSearchInProgressView();
         searchProgressBar.setPrefWidth(Double.MAX_VALUE);
         searchProgressBar.setPrefHeight(4);
         searchProgressBar.setProgress(ProgressBar.INDETERMINATE_PROGRESS);
@@ -96,6 +98,7 @@ public final class DownloadProgressPane {
     }
 
     public VBox inProgressView() { return inProgressView; }
+    public VBox searchInProgressView() { return searchInProgressView; }
     public Button startButton() { return startButton; }
     public Button stopButton() { return stopButton; }
     public HBox buttonRow() { return buttonRow; }
@@ -169,6 +172,20 @@ public final class DownloadProgressPane {
         progress.setPrefSize(48, 48);
         Theme.classes(progress, Theme.CL_PROGRESS_ACCENT);
         Label label = new Label(Icons.LOADING + "  Downloading in progress…");
+        label.getStyleClass().addAll("title", "small");
+        VBox view = new VBox(14, progress, label);
+        view.setAlignment(Pos.CENTER);
+        view.setPadding(new Insets(40, 14, 40, 14));
+        Theme.classes(view, Theme.CL_BG_APP);
+        UiFactory.hide(view);
+        return view;
+    }
+
+    private VBox buildSearchInProgressView() {
+        ProgressIndicator progress = new ProgressIndicator(-1);
+        progress.setPrefSize(48, 48);
+        Theme.classes(progress, Theme.CL_PROGRESS_ACCENT);
+        Label label = new Label(Icons.LOADING + "  Searching — please wait…");
         label.getStyleClass().addAll("title", "small");
         VBox view = new VBox(14, progress, label);
         view.setAlignment(Pos.CENTER);
