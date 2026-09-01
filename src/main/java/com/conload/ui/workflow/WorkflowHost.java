@@ -4,6 +4,8 @@ import com.conload.model.AppConfig;
 
 import javafx.stage.Window;
 
+import java.io.File;
+
 /**
  * Narrow interface the {@link WorkflowDialog} uses to interact with the host
  * application. The host (typically {@link com.conload.ui.AppShellController})
@@ -49,6 +51,11 @@ public interface WorkflowHost {
      *  @param label short status text
      *  @param spin  {@code true} to show the spinner (in-progress), {@code false} for static */
     default void showTaskBadge(String label, boolean spin) {}
+
+    /** Show an in-progress badge with the number of files newly written beneath {@code outputDirectory}. */
+    default void showTaskBadge(String label, boolean spin, File outputDirectory) {
+        showTaskBadge(label, spin);
+    }
 
     /** Hide the sidebar task badge on the active project's pane. */
     default void hideTaskBadge() {}

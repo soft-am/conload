@@ -257,16 +257,27 @@ public final class ProjectFileTreeCell extends TreeCell<File> {
             } else { setText(null); setGraphic(null); getStyleClass().add("bg-transparent"); setContextMenu(null); setOnContextMenuRequested(null); }
             return;
         }
-        String displayName = item.getName().isBlank() ? item.getAbsolutePath() : item.getName();
         boolean context = item.isDirectory() && contextPaths.get().contains(item.getAbsolutePath());
         boolean session = item.isDirectory() && sessionPaths.get().contains(item.getAbsolutePath());
+        String displayName;
+        if (getTreeItem() instanceof ConfluencePageTree.ConfluencePageTreeItem)
+            displayName = ((ConfluencePageTree.ConfluencePageTreeItem) getTreeItem()).getDisplayLabel();
+        else if (session && getTreeItem() instanceof ProjectTreeItems.SessionLeafItem) {
+            SessionFolderFiles.Info info = SessionFolderFiles.Info.parse(item);
+            displayName = info.title() != null && !info.title().isBlank()
+                    ? info.title() : SessionFolderFiles.friendlySessionName(item.getName());
+        } else
+            displayName = item.getName().isBlank() ? item.getAbsolutePath() : item.getName();
         if (context && getTreeItem() instanceof ProjectTreeItems.ContextFolderTreeItem) {
-            getStyleClass().addAll("context-folder", "bold"); setGraphic(buildContextRow(item)); setText(null);
+            getStyleClass().addAll("context-folder", "bold"); setText(displayName); setGraphic(buildContextIconPrefix(item));
         } else if (session && getTreeItem() instanceof ProjectTreeItems.SessionLeafItem) {
-            getStyleClass().add("session-folder"); setGraphic(buildSessionCardRow(item)); setText(null);
+            getStyleClass().add("bold"); setText(displayName); setGraphic(buildTintedSvg("/images/session-icon.svg", 14));
         } else if (item.isDirectory() && (contextPaths.get().stream().anyMatch(p -> p.startsWith(item.getAbsolutePath() + File.separator))
                 || sessionPaths.get().stream().anyMatch(p -> p.startsWith(item.getAbsolutePath() + File.separator)))) {
+            setText(displayName); setGraphic(null); getStyleClass().add("bold");
+        } else if (getTreeItem() instanceof ConfluencePageTree.ConfluencePageTreeItem) {
             setText(displayName); setGraphic(null);
+            getStyleClass().add(getTreeItem().isLeaf() ? "secondary" : "bold");
         } else { setText(displayName); setGraphic(null); getStyleClass().add(item.isDirectory() ? "bold" : "secondary"); }
         setOnContextMenuRequested(e -> { ContextMenu menu = item.isDirectory() ? buildFolderMenu() : buildFileMenu(); menu.show(this, e.getScreenX(), e.getScreenY()); e.consume(); });
     }
@@ -285,25 +296,12 @@ public final class ProjectFileTreeCell extends TreeCell<File> {
         Region spacer = UiFactory.hSpacer(); HBox.setHgrow(spacer, Priority.ALWAYS); row.getChildren().add(spacer);
         Label count = new Label(String.valueOf(group.getCount())); count.getStyleClass().add("sidebar-source-badge"); row.getChildren().add(count); return row;
     }
-    private HBox buildContextRow(File folder) {
-        HBox row = new HBox(6); row.getStyleClass().add("sidebar-context-row"); row.setMinWidth(0);
-        for (String icon : detectContextSourceIcons(folder)) row.getChildren().add(buildTintedSvg(icon, 14));
-        Label name = new Label(folder.getName()); name.getStyleClass().add("sidebar-context-name"); name.setMinWidth(0); row.getChildren().add(name);
-        Region spacer = UiFactory.hSpacer(); HBox.setHgrow(spacer, Priority.ALWAYS); row.getChildren().add(spacer);
-        int total = countContextChildren(folder); if (total > 0) { Label count = new Label(String.valueOf(total)); count.getStyleClass().add("sidebar-source-badge"); row.getChildren().add(count); }
-        return row;
-    }
-    private HBox buildSessionCardRow(File folder) {
-        SessionFolderFiles.Info info = SessionFolderFiles.Info.parse(folder);
-        String title = info.title() != null && !info.title().isBlank() ? info.title() : SessionFolderFiles.friendlySessionName(folder.getName());
-        HBox row = new HBox(8); row.getStyleClass().add("sidebar-session-card"); row.setMinWidth(0); row.getChildren().add(buildTintedSvg("/images/session-icon.svg", 14));
-        VBox text = new VBox(1); text.setMinWidth(0); Label titleLabel = new Label(title); titleLabel.getStyleClass().add("sidebar-session-title"); titleLabel.setMinWidth(0); text.getChildren().add(titleLabel);
-        HBox meta = new HBox(6); meta.setAlignment(Pos.CENTER_LEFT); meta.setMinWidth(0);
-        if (info.summary() != null && !info.summary().isBlank()) { String snippet = info.summary().length() > 80 ? info.summary().substring(0, 77) + "…" : info.summary(); Label sub = new Label(snippet); sub.getStyleClass().add("sidebar-session-subtitle"); sub.setMinWidth(0); meta.getChildren().add(sub); }
-        if (info.agent() != null && !info.agent().isBlank()) { Label pill = new Label(info.agent()); pill.getStyleClass().add("sidebar-session-agent-pill"); pill.setMinWidth(0); meta.getChildren().add(pill); }
-        text.getChildren().add(meta); row.getChildren().add(text); Region spacer = UiFactory.hSpacer(); HBox.setHgrow(spacer, Priority.ALWAYS); row.getChildren().add(spacer);
-        if (info.date() != null && !info.date().isBlank()) { Label date = new Label(info.date()); date.getStyleClass().add("sidebar-session-date"); date.setMinWidth(0); row.getChildren().add(date); }
-        row.setPickOnBounds(true); return row;
+    private HBox buildContextIconPrefix(File folder) {
+        List<String> icons = detectContextSourceIcons(folder);
+        if (icons.isEmpty()) return null;
+        HBox box = new HBox(2); box.getStyleClass().add("sidebar-context-row"); box.setMinWidth(0);
+        for (String icon : icons) box.getChildren().add(buildTintedSvg(icon, 14));
+        return box;
     }
     private String color() { String color = accentColor.get(); return color == null || color.isBlank() ? ProjectColors.DEFAULT : color; }
     private SvgIcon buildTintedSvg(String resource, int size) { return new SvgIcon(resource, size, "-app-bg", color()); }
@@ -326,10 +324,5 @@ public final class ProjectFileTreeCell extends TreeCell<File> {
         if (jira) result.add("/images/jira-logo.svg");
         if (github) result.add("/images/github-logo.svg");
         return result;
-    }
-    private int countContextChildren(File folder) {
-        File[] files = folder.listFiles(); if (files == null) return 0; int total = 0;
-        for (File file : files) { if (file.isDirectory() && (file.getName().equalsIgnoreCase("media") || file.getName().equalsIgnoreCase("jira") || file.getName().equalsIgnoreCase("github") || file.getName().equalsIgnoreCase("confluence") || file.getName().equalsIgnoreCase("workflow-result"))) { File[] children = file.listFiles(); if (children != null) total += children.length; } else if (file.isFile() && file.getName().toLowerCase().endsWith(".md")) total++; }
-        return total;
     }
 }

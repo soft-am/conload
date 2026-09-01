@@ -62,6 +62,16 @@ public final class AppPaths {
     public static Path openTabsJson()         { return DATA_DIR.resolve("open_tabs.json"); }
     public static Path terminalPidsJson()     { return DATA_DIR.resolve("terminal_pids.json"); }
     public static Path opencodeSessionsJson() { return DATA_DIR.resolve("opencode-sessions.json"); }
+    /**
+     * Per-CLI-type session cache: {@code ~/.conload/sessions-<cliType>.json}.
+     * Replaces the single shared {@code opencode-sessions.json}; each CLI
+     * agent's fetched sessions are cached under their own file so concurrent
+     * multi-CLI fetches no longer clobber each other.
+     */
+    public static Path sessionsJson(String cliType) {
+        String safe = cliType == null || cliType.isBlank() ? "default" : cliType.replaceAll("[^A-Za-z0-9_-]", "_");
+        return DATA_DIR.resolve("sessions-" + safe + ".json");
+    }
     public static Path workflowSettingsJson() { return DATA_DIR.resolve("workflow-settings.json"); }
     public static Path workflowTemplatesDir() { return DATA_DIR.resolve("workflow-templates"); }
 
@@ -84,6 +94,10 @@ public final class AppPaths {
         migrateLegacy("open_tabs.json",         openTabsJson());
         migrateLegacy("terminal_pids.json",     terminalPidsJson());
         migrateLegacy("opencode-sessions.json", opencodeSessionsJson());
+        // One-shot migration to the new per-CLI-type scheme: copy the legacy
+        // shared cache (~/.conload/opencode-sessions.json) into
+        // ~/.conload/sessions-opencode.json when the new file is absent.
+        copyWithinDataDir(opencodeSessionsJson(), sessionsJson("opencode"));
         migrateLegacy("workflow-settings.json", workflowSettingsJson());
         migrateLegacyDir(Path.of("src", "workflow-templates"), workflowTemplatesDir());
     }
@@ -95,13 +109,27 @@ public final class AppPaths {
     private static void migrateLegacy(String legacyName, Path target) {
         if (Files.exists(target)) return;
         Path legacy = LEGACY_SRC_DIR.resolve(legacyName);
-        if (Files.isRegularFile(legacy)) {
-            try {
-                Files.copy(legacy, target, StandardCopyOption.REPLACE_EXISTING);
-                log.info("Migrated legacy state: " + legacy + " -> " + target);
-            } catch (IOException e) {
-                log.log(Level.WARNING, "Failed to migrate " + legacy + " to " + target, e);
-            }
+        copyIfAbsent(legacy, target);
+    }
+
+    /** Copies {@code source} to {@code target} within the data dir when
+     *  {@code target} is absent and {@code source} exists. Used to migrate
+     *  the legacy shared {@code opencode-sessions.json} to the new per-CLI-type
+     *  {@code sessions-opencode.json} without losing cached session titles. */
+    private static void copyWithinDataDir(Path source, Path target) {
+        if (Files.exists(target)) return;
+        copyIfAbsent(source, target);
+    }
+
+    /** Shared copy primitive: copies {@code source} → {@code target} only when
+     *  {@code target} is absent and {@code source} is a regular file. */
+    private static void copyIfAbsent(Path source, Path target) {
+        if (!Files.isRegularFile(source)) return;
+        try {
+            Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+            log.info("Migrated state: " + source + " -> " + target);
+        } catch (IOException e) {
+            log.log(Level.WARNING, "Failed to migrate " + source + " to " + target, e);
         }
     }
 

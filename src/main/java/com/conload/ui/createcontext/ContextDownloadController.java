@@ -1,4 +1,4 @@
-package com.conload.ui.createcontext.download;
+package com.conload.ui.createcontext;
 
 import com.conload.model.Project;
 import com.conload.service.ProjectService;
@@ -8,16 +8,16 @@ import com.conload.ui.DialogStyler;
 import com.conload.ui.Icons;
 import com.conload.ui.Theme;
 import com.conload.ui.components.UiFactory;
-import com.conload.ui.createcontext.DownloadProgressPane;
-import com.conload.ui.createcontext.GitHubActionResult;
-import com.conload.ui.createcontext.GitHubPrResult;
-import com.conload.ui.createcontext.ResultPanel;
 import com.conload.ui.createcontext.model.DownloadTarget;
 import com.conload.ui.createcontext.model.JiraTableItem;
 import com.conload.ui.createcontext.model.PageSearchResult;
 import com.conload.ui.createcontext.model.PageTreeItem;
 import com.conload.ui.MainControllerSupport;
 import com.conload.github.GitHubClient;
+import com.conload.workflow.WorkflowCallbacks;
+import com.conload.workflow.WorkflowContext;
+import com.conload.workflow.WorkflowEnvironment;
+import com.conload.workflow.WorkflowInputs;
 import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -142,12 +142,56 @@ public final class ContextDownloadController {
                 host::appendLog, host.cancelled());
         host.setCurrentTask(task);
         host.bindDownload(task);
-        task.setOnSucceeded(e -> success(task, projectId, project, restorePrompt));
+        task.setOnSucceeded(e -> success(task, projectId, project, restorePrompt, "Download complete!"));
         task.setOnFailed(e -> failure(task, project));
         task.setOnCancelled(e -> cancelled(project));
         host.closeSearchPopup();
-        if (project != null) project.pane().showTaskBadge("Adding context…");
+        if (project != null) project.pane().showTaskBadge("Adding context…", true,
+                new File(folder, com.conload.util.FileUtil.normalizeContextFolderName(name)));
         new Thread(task).start();
+    }
+
+    /** Runs a recursive gather through the same task, progress, and badge flow as a normal download. */
+    public void startCrossContextGather(CrossSource source, String seed, boolean fullMode) {
+        String projectId = host.addContextTargetProjectId() != null
+                ? host.addContextTargetProjectId() : host.activeProjectId();
+        ProjectFiles project = host.projectFiles(projectId);
+        boolean restorePrompt = host.addContextTargetFolder() != null;
+        host.cancelled().set(false);
+        host.prepareDownload();
+        Task<String> task = new Task<>() {
+            @Override protected String call() throws Exception {
+                WorkflowEnvironment environment = new WorkflowEnvironment(host.config(), host.githubToken(),
+                        host.githubApiUrl(), host.workspacePath(), host.contextsDir(), projectId,
+                        host.fullConfluenceFolder());
+                WorkflowInputs inputs = new WorkflowInputs(Map.of(source.inputKey(), seed,
+                        "fullMode", Boolean.toString(fullMode)));
+                WorkflowCallbacks callbacks = new WorkflowCallbacks() {
+                    @Override public void onProgress(String stage, String message) {
+                        updateMessage("[" + stage + "] " + message);
+                    }
+
+                    @Override public void onLog(String line) {
+                        host.appendLog(line);
+                    }
+
+                    @Override public boolean isCancelled() {
+                        return host.cancelled().get() || Thread.currentThread().isInterrupted();
+                    }
+                };
+                WorkflowContext context = source.workflow().accumulate(environment, inputs, callbacks);
+                return context.contextRoot().toAbsolutePath().toString();
+            }
+        };
+        host.setCurrentTask(task);
+        host.bindDownload(task);
+        task.setOnSucceeded(e -> success(task, projectId, project, restorePrompt, "Cross-context ready"));
+        task.setOnFailed(e -> failure(task, project));
+        task.setOnCancelled(e -> cancelled(project));
+        host.closeSearchPopup();
+        if (project != null) project.pane().showTaskBadge("Gathering cross-context…", true,
+                host.contextsDir().toFile());
+        Thread.ofVirtual().name("cross-context", 0).start(task);
     }
 
     public void stop() {
@@ -195,11 +239,11 @@ public final class ContextDownloadController {
         node.getChildren().forEach(child -> collect(child, out, recursive));
     }
 
-    private void success(Task<String> task, String projectId, ProjectFiles project, boolean restorePrompt) {
-        if (project != null) project.pane().hideTaskBadge();
+    private void success(Task<String> task, String projectId, ProjectFiles project, boolean restorePrompt, String completionText) {
+        if (project != null) project.pane().showTaskBadge(Icons.CHECK + " " + completionText, false);
         host.setLastSessionPath(task.getValue());
         host.setDownloadState(false);
-        host.setStatus(Icons.CHECK + " Download complete!", "success");
+        host.setStatus(Icons.CHECK + " " + completionText, "success");
         Path folder = task.getValue() == null ? null : Path.of(task.getValue());
         String path = folder == null ? null : folder.toAbsolutePath().toString();
         try {
@@ -214,10 +258,10 @@ public final class ContextDownloadController {
             host.refreshProjects();
         }
         if (restorePrompt) host.restorePromptWorkspace();
-        else showCompletion(Icons.CHECK, "Download complete!", path == null ? null : "New context folder: " + path, "success");
+        else showCompletion(Icons.CHECK, completionText, path == null ? null : "New context folder: " + path, "success");
     }
     private void failure(Task<String> task, ProjectFiles project) {
-        if (project != null) project.pane().hideTaskBadge();
+        if (project != null) project.pane().showTaskBadge("✗ Download failed", false);
         Throwable error = task.getException();
         String detail = error != null && error.getMessage() != null ? error.getMessage() : "Unknown error";
         host.setDownloadState(false); host.setStatus("✗ Download failed: " + detail, "error"); host.appendLog("[ERROR] " + detail);
@@ -225,7 +269,7 @@ public final class ContextDownloadController {
         showCompletion("✗", "Download failed", detail, "error");
     }
     private void cancelled(ProjectFiles project) {
-        if (project != null) project.pane().hideTaskBadge();
+        if (project != null) project.pane().showTaskBadge(Icons.STOP + " Download cancelled", false);
         host.setDownloadState(false); host.setStatus(Icons.STOP + " Download cancelled.", "warning");
         showCompletion(Icons.STOP, "Download cancelled", "The download was stopped by the user.", "warning");
     }
@@ -269,6 +313,7 @@ public final class ContextDownloadController {
         SelectionData selectionData(); boolean hasVisibleResults(); File addContextTargetFolder(); String addContextTargetProjectId();
         String activeProjectId(); ProjectFiles projectFiles(String projectId); AtomicBoolean cancelled();
         SearchDownloadService searchDownloadService(); ProjectService projectService(); Task<?> currentTask();
+        com.conload.model.AppConfig config(); String githubApiUrl(); String workspacePath(); Path contextsDir(); String fullConfluenceFolder();
         void setCurrentTask(Task<String> task); void setLastSessionPath(String path); void prepareDownload(); void bindDownload(Task<String> task);
         void closeSearchPopup(); void appendLog(String message); void setStatus(String message, String style); void setDownloadState(boolean running);
         void alert(String title, String message); BorderPane mainShell();

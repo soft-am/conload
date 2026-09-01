@@ -4,10 +4,7 @@ import com.conload.ui.Icons;
 import com.conload.ui.Theme;
 import com.conload.ui.components.CrossContextIcon;
 import com.conload.ui.components.UiFactory;
-import com.conload.ui.workflow.CrossContextRunner;
-import com.conload.ui.workflow.CrossSource;
 import com.conload.ui.workflow.WorkflowHost;
-import com.conload.workflow.WorkflowContext;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Alert;
@@ -16,14 +13,11 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
-import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
-
-import java.util.function.Consumer;
 
 /**
  * The "Cross Context" section rendered at the bottom of the search popup. Lets
@@ -45,37 +39,28 @@ public final class CrossContextSection {
             files plus a cross_context_hierarchy.md map into the project's
             contexts folder — no manual selection needed.""";
 
-    private final CrossContextRunner runner;
     private final WorkflowHost host;
-    private final Consumer<String> onLog;
-    private final Runnable onClosePopup;
+    private final GatherCallback onGather;
 
     private final ComboBox<CrossSource> sourceBox = new ComboBox<>();
     private final TextField valueField = UiFactory.darkTextField("");
     private final CheckBox fullModeBox = new CheckBox("Full Mode");
     private final Button gatherBtn = UiFactory.accentButton("Gather cross -context");
-    private final Button stopBtn = UiFactory.errorButton("Stop");
-    private final ProgressIndicator spinner = new ProgressIndicator(-1);
     private final Label statusLabel = new Label();
     private final VBox view;
 
-    public CrossContextSection(CrossContextRunner runner, WorkflowHost host,
-                                Consumer<String> onLog, Runnable onClosePopup) {
-        this.runner = runner;
+    @FunctionalInterface
+    public interface GatherCallback {
+        void gather(CrossSource source, String seed, boolean fullMode);
+    }
+
+    public CrossContextSection(WorkflowHost host, GatherCallback onGather) {
         this.host = host;
-        this.onLog = onLog;
-        this.onClosePopup = onClosePopup;
+        this.onGather = onGather;
         this.view = build();
     }
 
     public VBox view() { return view; }
-
-    public void setRunningUI(boolean running) {
-        gatherBtn.setDisable(running);
-        UiFactory.setVisible(stopBtn, running);
-        UiFactory.setVisible(spinner, running);
-        if (!running) statusLabel.setText("");
-    }
 
     private VBox build() {
         Label title = new Label(Icons.SPARKLE + "  Cross Context (recursive)");
@@ -110,18 +95,13 @@ public final class CrossContextSection {
         fullModeBox.setSelected(true);
         fullModeBox.setTooltip(new Tooltip("Deep recursion + epic children + word-frequency discovery"));
 
-        spinner.setPrefSize(16, 16);
-        UiFactory.hide(spinner);
-        UiFactory.hide(stopBtn);
-
         gatherBtn.setGraphic(new CrossContextIcon(16));
         gatherBtn.setContentDisplay(ContentDisplay.LEFT);
         gatherBtn.setOnAction(e -> startGather());
-        stopBtn.setOnAction(e -> runner.stop());
 
         statusLabel.getStyleClass().add("small");
 
-        HBox controls = new HBox(8, sourceBox, valueField, fullModeBox, gatherBtn, stopBtn, spinner);
+        HBox controls = new HBox(8, sourceBox, valueField, fullModeBox, gatherBtn);
         controls.setAlignment(Pos.CENTER_LEFT);
         controls.setPadding(Theme.PAD_ROW_TIGHT);
 
@@ -132,7 +112,6 @@ public final class CrossContextSection {
     }
 
     private void startGather() {
-        if (runner.isRunning()) return;
         if (host.activeProjectId() == null) {
             new Alert(Alert.AlertType.WARNING,
                     "Open a project first — cross-context needs an active project workspace.")
@@ -145,31 +124,7 @@ public final class CrossContextSection {
             statusLabel.setText(Icons.WARNING + "  Enter a value for " + titleOf(source));
             return;
         }
-        statusLabel.setText("");
-        setRunningUI(true);
-        statusLabel.setText(Icons.LOADING + "  Gathering cross-context…");
-
-        runner.run(source, seed, fullModeBox.isSelected(),
-                this::onLog, this::onStatus, this::onComplete, this::onFailed);
-    }
-
-    private void onLog(String line) { onLog.accept(line); }
-
-    private void onStatus(String msg) { statusLabel.setText(msg); }
-
-    private void onComplete(WorkflowContext ctx) {
-        setRunningUI(false);
-        try {
-            host.registerContext(ctx.contextRoot().toAbsolutePath().toString());
-        } catch (Exception ignored) { /* best-effort */ }
-        onLog.accept(Icons.CHECK + "  Cross-context gathered into: " + ctx.contextRoot());
-        onClosePopup.run();
-    }
-
-    private void onFailed(Throwable t) {
-        setRunningUI(false);
-        statusLabel.setText(Icons.WARNING + "  " + t.getMessage());
-        onLog.accept("[ERROR] Cross-context failed: " + t.getMessage());
+        onGather.gather(source, seed, fullModeBox.isSelected());
     }
 
     private static String titleOf(CrossSource s) {

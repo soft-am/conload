@@ -1,4 +1,4 @@
-package com.conload.ui.workflow;
+package com.conload.ui.createcontext;
 
 import com.conload.workflow.Workflow;
 import com.conload.workflow.WorkflowRegistry;
@@ -6,7 +6,7 @@ import com.conload.workflow.WorkflowRegistry;
 /**
  * The three cross-context seed sources selectable from the download-context
  * popup. Each maps to one of the registered cross-context workflows, which the
- * {@link CrossContextRunner} invokes with a single seed value.
+ * workflow runs with a single seed value.
  */
 public enum CrossSource {
     JIRA("prepare-to-refinement", "jiraKeys",
@@ -26,7 +26,7 @@ public enum CrossSource {
         this.prompt = prompt;
     }
 
-    Workflow workflow() {
+    public Workflow workflow() {
         Workflow w = WorkflowRegistry.findById(workflowId);
         if (w == null) {
             throw new IllegalStateException("Cross-context workflow not registered: " + workflowId);

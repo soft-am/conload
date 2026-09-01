@@ -20,13 +20,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /** Left side-pane showing the local project files and registered context. */
 public class ProjectFilesPane extends VBox {
     private File workDir;
-    private final Consumer<File> onFileSelected;
+    private final Consumer<File> onFileClick;
     private TreeView<File> treeView;
     private TreeView<File> contextTreeView;
     private WorktreeSidebarSection worktreeSection;
@@ -51,6 +52,7 @@ public class ProjectFilesPane extends VBox {
     private boolean pickerModeActive;
     private Button addContextBtn;
     private Button codeToggleBtn;
+    private Button contextToggleBtn;
     private Button codeRefreshBtn;
     private HBox taskBadgeBox;
     private HBox taskBadgeHeader;
@@ -61,10 +63,15 @@ public class ProjectFilesPane extends VBox {
     private String accentColor = "";
     private Set<String> contextFolderPaths = new HashSet<>();
     private Set<String> sessionFolderPaths = new HashSet<>();
+    private VBox codeSectionView;
+    private VBox contextSectionView;
+    private javafx.animation.Timeline taskBadgeCountTimeline;
+    private final AtomicBoolean taskBadgeCountInFlight = new AtomicBoolean();
+    private long taskBadgeCountVersion;
 
-    public ProjectFilesPane(File workDir, Consumer<File> onFileSelected) {
+    public ProjectFilesPane(File workDir, Consumer<File> onFileClick) {
         this.workDir = workDir;
-        this.onFileSelected = onFileSelected;
+        this.onFileClick = onFileClick;
         setSpacing(0); setPadding(Insets.EMPTY); getStyleClass().add("panel-border-left");
         setMinWidth(410); setPrefWidth(410); setMaxWidth(Double.MAX_VALUE); buildUI();
     }
@@ -141,16 +148,83 @@ public class ProjectFilesPane extends VBox {
         for (TreeItem<File> child : node.getChildren()) { TreeItem<File> found = findAndExpand(child, target); if (found != null) { node.setExpanded(true); return found; } }
         return null;
     }
-    public void showTaskBadge(String label) { showTaskBadge(label, true); }
-    public void showTaskBadge(String label, boolean spin) { javafx.application.Platform.runLater(() -> { if (label != null && !label.isBlank()) taskBadgeLabel.setText(label); UiFactory.setVisible(taskBadgeSpinner, spin); taskBadgeBox.setVisible(true); taskBadgeBox.setManaged(true); taskBadgeHeader.setVisible(true); taskBadgeHeader.setManaged(true); }); }
-    public void hideTaskBadge() { javafx.application.Platform.runLater(() -> { taskBadgeBox.setVisible(false); taskBadgeBox.setManaged(false); taskBadgeHeader.setVisible(false); taskBadgeHeader.setManaged(false); }); }
+    public void showTaskBadge(String label) { showTaskBadge(label, true, null); }
+    public void showTaskBadge(String label, boolean spin) { showTaskBadge(label, spin, null); }
+    public void showTaskBadge(String label, boolean spin, File outputDirectory) {
+        javafx.application.Platform.runLater(() -> {
+            stopTaskBadgeCount();
+            long countVersion = ++taskBadgeCountVersion;
+            taskBadgeLabel.setText(label == null ? "" : label);
+            UiFactory.setVisible(taskBadgeSpinner, spin);
+            taskBadgeBox.setVisible(true);
+            taskBadgeBox.setManaged(true);
+            taskBadgeHeader.setVisible(true);
+            taskBadgeHeader.setManaged(true);
+            if (spin && outputDirectory != null) startTaskBadgeCount(label, outputDirectory, countVersion);
+        });
+    }
+
+    public void hideTaskBadge() {
+        javafx.application.Platform.runLater(() -> {
+            stopTaskBadgeCount();
+            taskBadgeCountVersion++;
+            taskBadgeBox.setVisible(false);
+            taskBadgeBox.setManaged(false);
+            taskBadgeHeader.setVisible(false);
+            taskBadgeHeader.setManaged(false);
+        });
+    }
+
+    private void startTaskBadgeCount(String label, File outputDirectory, long countVersion) {
+        Thread.startVirtualThread(() -> {
+            long initialCount = countFiles(outputDirectory);
+            javafx.application.Platform.runLater(() -> {
+                if (countVersion != taskBadgeCountVersion) return;
+                taskBadgeCountTimeline = new javafx.animation.Timeline(new javafx.animation.KeyFrame(
+                        javafx.util.Duration.millis(500), event -> updateTaskBadgeCount(label, outputDirectory, initialCount, countVersion)));
+                taskBadgeCountTimeline.setCycleCount(javafx.animation.Animation.INDEFINITE);
+                taskBadgeCountTimeline.play();
+            });
+        });
+    }
+
+    private void updateTaskBadgeCount(String label, File outputDirectory, long initialCount, long countVersion) {
+        if (!taskBadgeCountInFlight.compareAndSet(false, true)) return;
+        Thread.startVirtualThread(() -> {
+            long addedFiles = Math.max(0, countFiles(outputDirectory) - initialCount);
+            javafx.application.Platform.runLater(() -> {
+                if (countVersion == taskBadgeCountVersion && taskBadgeCountTimeline != null)
+                    taskBadgeLabel.setText(label + " (" + addedFiles + " files)");
+                taskBadgeCountInFlight.set(false);
+            });
+        });
+    }
+
+    private long countFiles(File directory) {
+        if (directory == null || !directory.isDirectory()) return 0;
+        try (var paths = java.nio.file.Files.walk(directory.toPath())) {
+            return paths.filter(java.nio.file.Files::isRegularFile).count();
+        } catch (java.io.IOException ignored) {
+            return 0;
+        }
+    }
+
+    private void stopTaskBadgeCount() {
+        if (taskBadgeCountTimeline != null) {
+            taskBadgeCountTimeline.stop();
+            taskBadgeCountTimeline = null;
+        }
+    }
     public void setOnTaskBadgeClick(Runnable callback) { onTaskBadgeClick = callback; }
 
     private void buildUI() {
         addContextBtn = new Button(Icons.ADD); addContextBtn.getStyleClass().add("sidebar-section-action"); addContextBtn.setTooltip(new Tooltip("Add context")); addContextBtn.setOnAction(e -> showContextActions());
         codeToggleBtn = buildCodeToggleBtn();
+        contextToggleBtn = buildContextToggleBtn();
         codeRefreshBtn = buildCodeRefreshBtn();
-        taskBadgeHeader = buildTaskBadgeHeader(); treeView = buildTreeView(buildCodeSection()); contextTreeView = buildTreeView(buildContextSection()); worktreeSection = buildWorktreeSection(); addSectionViews();
+        taskBadgeHeader = buildTaskBadgeHeader(); treeView = buildTreeView(buildCodeSection()); contextTreeView = buildTreeView(buildContextSection());
+        //contextTreeView.setMaxHeight(100);
+        worktreeSection = buildWorktreeSection(); addSectionViews();
     }
     private Button buildCodeToggleBtn() {
         Button btn = new Button(Icons.CHEVRON_DOWN); btn.getStyleClass().add("sidebar-section-action");
@@ -169,6 +243,18 @@ public class ProjectFilesPane extends VBox {
         treeView.setVisible(visible); treeView.setManaged(visible);
         codeToggleBtn.setText(visible ? Icons.CHEVRON_DOWN : Icons.BULLET);
         codeToggleBtn.setTooltip(new Tooltip(visible ? "Collapse code section" : "Expand code section"));
+    }
+    private Button buildContextToggleBtn() {
+        Button btn = new Button(Icons.CHEVRON_DOWN); btn.getStyleClass().add("sidebar-section-action");
+        btn.setTooltip(new Tooltip("Collapse context section"));
+        btn.setOnAction(e -> toggleContextSection());
+        return btn;
+    }
+    private void toggleContextSection() {
+        boolean visible = !contextTreeView.isVisible();
+        contextTreeView.setVisible(visible); contextTreeView.setManaged(visible);
+        contextToggleBtn.setText(visible ? Icons.CHEVRON_DOWN : Icons.BULLET);
+        contextToggleBtn.setTooltip(new Tooltip(visible ? "Collapse context section" : "Expand context section"));
     }
     private void showContextActions() {
         TreeItem<File> selected = allTreeViews().stream().filter(tv -> tv != null).map(tv -> tv.getSelectionModel().getSelectedItem()).filter(i -> i != null).findFirst().orElse(null);
@@ -195,17 +281,80 @@ public class ProjectFilesPane extends VBox {
     }
     private void addSectionViews() {
         HBox codeActions = new HBox(4, codeRefreshBtn, codeToggleBtn);
-        VBox code = buildScrollableSection("CODE", codeActions, treeView); VBox context = buildScrollableSection("CONTEXT", addContextBtn, contextTreeView); VBox.setVgrow(code, Priority.ALWAYS); VBox.setVgrow(context, Priority.ALWAYS);
-        code.getStyleClass().add("panel-border-top");
-        getChildren().addAll(worktreeSection.getView(), taskBadgeHeader, code, context);
+        HBox contextActions = new HBox(4, addContextBtn, contextToggleBtn);
+        codeSectionView = buildScrollableSection("CODE", codeActions, treeView);
+        contextSectionView = buildScrollableSection("CONTEXT", contextActions, contextTreeView);
+        VBox.setVgrow(codeSectionView, Priority.ALWAYS);
+        VBox.setVgrow(contextSectionView, Priority.ALWAYS);
+        codeSectionView.getStyleClass().add("panel-border-top");
+        getChildren().addAll(worktreeSection.getView(), codeSectionView, taskBadgeHeader, contextSectionView);
+
+        heightProperty().addListener((obs, old, newVal) -> updateSectionHeights());
+        if (worktreeSection != null) {
+            worktreeSection.getView().visibleProperty().addListener((obs, old, newVal) -> updateSectionHeights());
+            worktreeSection.getView().managedProperty().addListener((obs, old, newVal) -> updateSectionHeights());
+        }
+    }
+
+    private void updateSectionHeights() {
+        double totalHeight = getHeight();
+        if (totalHeight <= 0) return;
+
+        VBox wtView = worktreeSection != null ? worktreeSection.getView() : null;
+        boolean wtVisible = wtView != null && wtView.isVisible() && wtView.isManaged();
+        if (wtVisible) {
+            wtView.setPrefHeight(totalHeight * 0.20);
+            if (codeSectionView != null) codeSectionView.setPrefHeight(totalHeight * 0.40);
+            if (contextSectionView != null) contextSectionView.setPrefHeight(totalHeight * 0.40);
+        } else {
+            if (wtView != null) wtView.setPrefHeight(0);
+            if (codeSectionView != null) codeSectionView.setPrefHeight(totalHeight * 0.50);
+            if (contextSectionView != null) contextSectionView.setPrefHeight(totalHeight * 0.50);
+        }
     }
     private VBox buildScrollableSection(String titleText, javafx.scene.Node action, TreeView<File> content) {
         HBox header = SidebarSectionHeader.create(titleText, action);
-        content.setMinHeight(0); VBox.setVgrow(content, Priority.ALWAYS); VBox section = new VBox(0, header, content); section.setMinHeight(0); return section;
+        content.setMinHeight(0);
+        content.setPrefHeight(100);
+        VBox.setVgrow(content, Priority.ALWAYS);
+        VBox section = new VBox(0, header, content);
+        section.setMinHeight(0);
+        section.setPrefHeight(100);
+        return section;
     }
     private WorktreeSidebarSection buildWorktreeSection() { return new WorktreeSidebarSection(() -> { if (onCreateWorktree != null) onCreateWorktree.run(); }, () -> { if (onRefreshWorktrees != null) onRefreshWorktrees.run(); }, w -> { if (onSelectWorktree != null) onSelectWorktree.accept(w); }, w -> { if (onRemoveWorktree != null) onRemoveWorktree.accept(w); }, () -> currentWorktreePath, () -> worktreeSessionLabels, (wt, idx) -> { if (onActivateTerminalSession != null) onActivateTerminalSession.accept(wt, idx); }); }
     private void wireSectionTreeViewHandlers(TreeView<File> tv) {
-        tv.setOnMouseClicked(event -> { TreeItem<File> item = tv.getSelectionModel().getSelectedItem(); if (item != null && item.getValue() != null && onFileSelected != null) onFileSelected.accept(item.getValue()); });
+        tv.setOnMouseClicked(event -> {
+            if (event.getButton() != javafx.scene.input.MouseButton.PRIMARY) return;
+            if (event.getClickCount() > 1) return;
+            if (event.getPickResult() == null || event.getPickResult().getIntersectedNode() == null) return;
+            javafx.scene.Node hit = event.getPickResult().getIntersectedNode();
+            if (isDisclosureClick(hit, tv)) return;
+            ProjectFileTreeCell cell = rowCellFor(hit, tv);
+            if (cell == null || cell.isEmpty() || cell.getItem() == null) return;
+            File file = cell.getItem();
+            if (pickerModeActive) {
+                if (onFileClick != null) onFileClick.accept(file);
+            } else if (file.isFile() && file.getName().toLowerCase().endsWith(".md")) {
+                if (onViewMarkdown != null) onViewMarkdown.accept(file);
+            } else if (onFileClick != null) onFileClick.accept(file);
+        });
         tv.addEventFilter(javafx.scene.input.ScrollEvent.SCROLL, event -> { if (event.getDeltaY() == 0) return; for (var node : tv.lookupAll(".scroll-bar:vertical")) if (node instanceof ScrollBar sb) { double delta = -event.getDeltaY() * 0.5; sb.setValue(Math.max(sb.getMin(), Math.min(sb.getMax(), sb.getValue() + delta))); event.consume(); break; } });
+    }
+
+    private boolean isDisclosureClick(javafx.scene.Node node, TreeView<File> tv) {
+        while (node != null && node != tv) {
+            if (node.getStyleClass().contains("tree-disclosure-node")) return true;
+            node = node.getParent();
+        }
+        return false;
+    }
+
+    private ProjectFileTreeCell rowCellFor(javafx.scene.Node node, TreeView<File> tv) {
+        while (node != null && node != tv) {
+            if (node instanceof ProjectFileTreeCell cell) return cell;
+            node = node.getParent();
+        }
+        return null;
     }
 }

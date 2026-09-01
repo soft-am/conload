@@ -15,7 +15,6 @@ import com.conload.service.RecursivePageProcessor;
 import com.conload.service.SearchDownloadService;
 import com.conload.service.search.SourceInputClassifier;
 import com.conload.ui.createcontext.model.CriteriaType;
-import com.conload.ui.workflow.CrossContextRunner;
 import com.conload.ui.workflow.WorkflowHost;
 import com.conload.ui.createcontext.model.DownloadTarget;
 import com.conload.ui.createcontext.model.PageSearchResult;
@@ -25,7 +24,6 @@ import com.conload.ui.createcontext.model.SearchResults;
 import com.conload.ui.createcontext.presenter.SearchResultsPresenter;
 import com.conload.ui.createcontext.presenter.SearchResultTables;
 import com.conload.ui.createcontext.search.SearchExecutionController;
-import com.conload.ui.createcontext.download.ContextDownloadController;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
@@ -88,7 +86,6 @@ public abstract class ContextAcquisitionController extends ManagementScreensCont
     private SearchCriteriaPane searchCriteriaPane;
     private DownloadProgressPane downloadProgressPane;
     private ContextDownloadController downloadController;
-    private CrossContextRunner crossContextRunner;
     private CrossContextSection crossContextSection;
 
     protected Region buildDownloadTab() {
@@ -226,9 +223,8 @@ public abstract class ContextAcquisitionController extends ManagementScreensCont
         Theme.classes(middle, Theme.CL_BG_APP);
         popupInputsScroll = UiFactory.scrollable(middle);
         VBox.setVgrow(popupInputsScroll, Priority.ALWAYS);
-        crossContextRunner = new CrossContextRunner(workflowHost());
-        crossContextSection = new CrossContextSection(crossContextRunner, workflowHost(),
-                this::appendLog, this::closeSearchPopup);
+        crossContextSection = new CrossContextSection(workflowHost(),
+                (source, seed, fullMode) -> downloadController.startCrossContextGather(source, seed, fullMode));
         return new VBox(0, popupInputsScroll, popupSearchBtnRow, crossContextSection.view());
     }
 
@@ -780,6 +776,11 @@ public abstract class ContextAcquisitionController extends ManagementScreensCont
         @Override public AtomicBoolean cancelled() { return ContextAcquisitionController.this.cancelled; }
         @Override public SearchDownloadService searchDownloadService() { return ContextAcquisitionController.this.searchDownloadService; }
         @Override public ProjectService projectService() { return ContextAcquisitionController.this.projectService; }
+        @Override public AppConfig config() { return workflowHost().config(); }
+        @Override public String githubApiUrl() { return workflowHost().githubApiUrl(); }
+        @Override public String workspacePath() { return workflowHost().workspacePath(); }
+        @Override public Path contextsDir() { return workflowHost().contextsDir(); }
+        @Override public String fullConfluenceFolder() { return workflowHost().fullConfluenceFolder(); }
         @Override public Task<?> currentTask() { return ContextAcquisitionController.this.currentTask; }
         @Override public void setCurrentTask(Task<String> task) { currentTask = task; }
         @Override public void setLastSessionPath(String path) { lastSessionPath = path; }

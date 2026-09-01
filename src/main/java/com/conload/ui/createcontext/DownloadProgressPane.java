@@ -50,6 +50,7 @@ public final class DownloadProgressPane {
         spinner.getStyleClass().add("download-spinner");
         UiFactory.hide(spinner);
         Label download = new Label("Download");
+        download.getStyleClass().addAll("app-button", "accent");
         HBox content = new HBox(6, download, spinner);
         content.setAlignment(Pos.CENTER);
         startButton = new Button();

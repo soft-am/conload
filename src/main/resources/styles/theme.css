@@ -722,6 +722,8 @@
 .panel-border-left { -fx-border-color: -divider-primary; -fx-border-width: 0 1 0 0; }
 .terminal-section { -fx-background-color: transparent; }
 .terminal-bar-session { -fx-padding: 5 8 5 8; -fx-background-radius: 4; -fx-border-radius: 4; }
+.terminal-bar-session-id { -fx-font-size: 10; -fx-fill: -app-text; }
+.terminal-bar-session-main { -fx-fill: -app-text; }
 .terminal-subtab-strip { -fx-background-color: -c-terminal-glass; -fx-border-color: -divider-primary; -fx-border-width: 0 0 1 0; }
 .terminal-subtab { -fx-font-size: 11;  -fx-cursor: hand; }
 .terminal-subtab.active { -fx-text-fill: -accent-color; -fx-border-color: -accent-color; }
@@ -814,6 +816,8 @@
 .scroll-bar { -fx-pref-width: 12; -fx-pref-height: 12; }
 .scroll-bar:vertical { -fx-pref-width: 12; }
 .scroll-bar:horizontal { -fx-pref-height: 12; }
+.scroll-bar:vertical .thumb { -fx-min-height: 20px; }
+.scroll-bar:horizontal .thumb { -fx-min-width: 20px; }
 .scroll-bar .increment-arrow, .scroll-bar .decrement-arrow {
     -fx-padding: 0;
     -fx-shape: null;
@@ -824,6 +828,9 @@
 .project-files-tree .scroll-bar .track,
 .scroll-bar .increment-button { -fx-pref-width: 0; -fx-pref-height: 0; }
 .scroll-bar .decrement-button { -fx-pref-width: 0; -fx-pref-height: 0; }
+
+
+
 .log-area { -fx-background-color: -app-log; -fx-control-inner-background: -app-log; -fx-highlight-fill: -app-text; -fx-highlight-text-fill: -app-bg; }
 .progress-accent { -fx-progress-color: -app-text; }
 .workflow-progress-warning { -fx-text-fill: -app-warning; }
@@ -1025,6 +1032,19 @@
     -fx-background-color: derive(-app-warning, -80%);
 }
 .config-banner .icon-button { -fx-text-fill: -app-warning; }
+
+/* ── Application error banner (shown on demand below the config warning) ── */
+.error-banner {
+    -fx-background-color: -app-bg;
+    -fx-border-color: -app-error;
+    -fx-border-width: 1 0 1 0;
+    -fx-padding: 7 18 7 18;
+    -fx-spacing: 10;
+    -fx-alignment: CENTER_LEFT;
+}
+.error-banner .label { -fx-text-fill: -app-error; }
+.error-banner .error-banner-icon { -fx-font-size: 14; }
+.error-banner .app-button { -fx-text-fill: -app-error; }
 
 /* ── Splash screen ─────────────────────────────────────────────────────── */
 .splash-root {

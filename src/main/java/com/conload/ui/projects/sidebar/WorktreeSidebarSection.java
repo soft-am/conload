@@ -139,8 +139,8 @@ public final class WorktreeSidebarSection {
         list.getStyleClass().add("worktree-list");
         list.setCellFactory(lv -> new WorktreeCell());
         list.setMinHeight(0);
-        list.setPrefHeight(350);
-        list.setMaxHeight(350);
+        list.setPrefHeight(100);
+        VBox.setVgrow(list, Priority.ALWAYS);
 
         errorLabel.getStyleClass().addAll("small", "error", "worktree-error");
         errorLabel.setWrapText(true);

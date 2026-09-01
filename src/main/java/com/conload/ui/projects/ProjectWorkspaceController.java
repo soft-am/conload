@@ -1,6 +1,7 @@
 package com.conload.ui.projects;
 
 import com.conload.ui.createcontext.ContextAcquisitionController;
+import com.conload.ui.createcontext.ConfluenceProjectCreator;
 import com.conload.ui.DialogStyler;
 import com.conload.ui.Icons;
 import com.conload.util.BackgroundTasks;
@@ -368,7 +369,7 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
      * session id, that id is injected into the new terminal as a
      * <em>pending resume</em>: the terminal bar shows
      * {@code "opencode: <id>"} next to the PID label as a clickable link.
-     * One click → the existing {@code resumeOpencodeSession(id)} sends the
+     * One click → the existing {@code resumeSession(id)} sends the
      * shell commands to resume; the label then becomes read-only. This
      * durable id is also mirrored onto the {@link Project} model
      * (lastSessionType/lastSessionId) by {@code saveOpenTabs} so it survives
@@ -436,7 +437,7 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
                     String stype = tab.sessionType();
                     String sid   = tab.sessionId();
                     if (sid != null && !sid.isBlank()
-                            && ("opencode".equals(stype) || "copilot".equals(stype))) {
+                            && com.conload.ui.terminal.session.CliSessionController.isResumableType(stype)) {
                         com.conload.ui.projects.workspace.TerminalGroup g = projectTerminals.get(wsKey);
                         if (g != null && tab.terminalSubId() < g.size()) {
                             CopilotTerminalPane t = g.terminals().get(tab.terminalSubId());
@@ -483,7 +484,7 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
             File dir = new File(workDir);
             if (!dir.isDirectory()) dir = new File(System.getProperty("user.home"));
             ProjectFilesPane treePane = new ProjectFilesPane(dir, file -> {
-                if (sharedPromptPanel != null) sharedPromptPanel.addFile(file);
+                if (sharedPromptPanel != null) sharedPromptPanel.handleFileClick(file);
             });
             treePane.setOnAddLocalContext(this::showProjectLocalImport);
             treePane.setOnDownloadContext(this::showProjectAddContextView);
@@ -502,15 +503,7 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
             treePane.setOnRefreshWorktrees(this::refreshWorktreesForActiveProject);
             treePane.setOnSelectWorktree(this::selectWorktree);
             treePane.setOnRemoveWorktree(this::removeWorktree);
-            treePane.setOnTaskBadgeClick(() -> {
-                if (searchResultsReady) {
-                    taskBadgeClickBackToResults(projectId);
-                } else {
-                    restorePromptWorkspace();
-                    ProjectFilesPane p = projectFilesPanes.get(projectId);
-                    if (p != null) p.hideTaskBadge();
-                }
-            });
+            treePane.setOnTaskBadgeClick(() -> taskBadgeClickBackToResults(projectId));
             treePane.setOnActivateTerminalSession((wtPath, subIdx) -> {
                 if (activeProjectId == null) return;
                 Project p = projectService.findById(activeProjectId);
@@ -604,8 +597,7 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
         if (!isSearchRunning() && !searchResultsReady) Platform.runLater(this::openSearchDialog);
     }
 
-    /** Called when the user clicks the "Results ready" sidebar badge. Re-mounts
-     *  the cached download-context tab (with results visible) and hides the badge. */
+    /** Re-mounts the shared context screen for any search or download badge state. */
     private void taskBadgeClickBackToResults(String projectId) {
         if (projectId == null || !projectId.equals(activeProjectId)) {
             Project p = projectService.findById(projectId);
@@ -633,8 +625,6 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
             VBox.setVgrow(cachedDownloadPane, Priority.ALWAYS);
             contentArea.getChildren().setAll(wrapper);
         }
-        ProjectFilesPane pane = projectFilesPanes.get(projectId);
-        if (pane != null) pane.hideTaskBadge();
     }
 
 
@@ -1014,7 +1004,7 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
         // reflects the now-active workspace's terminal.
         if (sharedPromptPanel != null) sharedPromptPanel.refreshActiveTerminal();
         // Check if opencode sessions exist → show Sessions button if so
-        terminal.checkForOpencodeSessions();
+        terminal.checkForCliSessions();
         // sessions availability may have changed — re-sync the prompt bar.
         if (sharedPromptPanel != null) sharedPromptPanel.refreshActiveTerminal();
         refreshProjectTabsBar();
@@ -1034,7 +1024,7 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
         if (terminal != null && terminalHost != null) {
             terminalHost.getChildren().setAll(terminal);
             if (sharedPromptPanel != null) sharedPromptPanel.refreshActiveTerminal();
-            terminal.checkForOpencodeSessions();
+            terminal.checkForCliSessions();
         }
         if (terminalSubtabStrip != null) terminalSubtabStrip.refreshActive();
         updateProjectTabStates();
@@ -1102,8 +1092,8 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
         String stype = parts[0];
         String sid   = parts[1];
         if (sid.isBlank()) return;
-        // Resume is only wired for opencode/copilot today.
-        if (!"opencode".equals(stype) && !"copilot".equals(stype)) return;
+        // Resume is gated by the CLI type's configured resumeCommand.
+        if (!com.conload.ui.terminal.session.CliSessionController.isResumableType(stype)) return;
         terminal.injectDurableSession(stype, sid);
     }
 
@@ -1211,13 +1201,7 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
             String projectId, java.util.List<Worktree> worktrees, String baseRepoPath) {
         java.util.Map<String, java.util.List<com.conload.ui.projects.sidebar.WorktreeSessionBadge.SessionInfo>> labels = new java.util.HashMap<>();
         if (worktrees == null) return labels;
-        java.util.Map<String,String> idToTitle = new java.util.HashMap<>();
-        try {
-            for (com.conload.model.OpencodeSession s : new com.conload.service.OpencodeSessionService().loadCachedSessions()) {
-                if (s.getId() != null && !s.getId().isBlank() && s.getTitle() != null)
-                    idToTitle.put(s.getId(), s.getTitle());
-            }
-        } catch (Exception ignored) { /* cache may not exist yet */ }
+        java.util.Map<String,String> idToTitle = com.conload.sessionsprocessing.SessionProcessor.loadAllIdToTitles();
         for (Worktree w : worktrees) {
             String wtPath = w.getPath();
             if (wtPath == null || wtPath.isBlank()) continue;

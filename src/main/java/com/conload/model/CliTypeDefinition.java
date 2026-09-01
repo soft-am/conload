@@ -31,7 +31,8 @@ public record CliTypeDefinition(
         String detectText,
         String listCommand,
         String resumeCommand,
-        String exportCommand
+        String exportCommand,
+        boolean canCompact
 ) {
     public CliTypeDefinition {
         label         = label         != null ? label         : "";
@@ -43,7 +44,13 @@ public record CliTypeDefinition(
 
     /** No-arg ctor for reflective Jackson deserialization. */
     public CliTypeDefinition() {
-        this("", "", "", "", "");
+        this("", "", "", "", "", false);
+    }
+
+    /** Back-compat 5-arg ctor (canCompact defaults to {@code false}). */
+    public CliTypeDefinition(String label, String detectText, String listCommand,
+                              String resumeCommand, String exportCommand) {
+        this(label, detectText, listCommand, resumeCommand, exportCommand, false);
     }
 
     public String getLabel()         { return label; }
@@ -51,6 +58,8 @@ public record CliTypeDefinition(
     public String getListCommand()   { return listCommand; }
     public String getResumeCommand() { return resumeCommand; }
     public String getExportCommand() { return exportCommand; }
+    /** Whether this CLI supports LLM-powered session compaction (e.g. via {@code opencode serve}). */
+    public boolean canCompact()      { return canCompact; }
 
     /** Whether this CLI exposes a JSON session listing (Sessions button shown). */
     public boolean hasSessions() { return !listCommand.isBlank(); }

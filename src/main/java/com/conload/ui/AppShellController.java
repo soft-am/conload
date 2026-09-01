@@ -2,6 +2,7 @@ package com.conload.ui;
 
 import com.conload.ui.Icons;
 import com.conload.ui.components.UiFactory;
+import com.conload.ui.components.AppErrorNotifier;
 import com.conload.ui.components.AboutPanel;
 import com.conload.ui.components.WelcomeGuidePopup;
 import com.conload.ui.projects.ProjectFilesPane;
@@ -40,6 +41,8 @@ public class AppShellController extends ProjectWorkspaceController {
     /** The banner's body label, updated by {@link #refreshConfigBanner()} with
      *  the names of whichever required settings are still missing. */
     private Label configBannerText;
+    private HBox errorBanner;
+    private Label errorBannerText;
 
     // ── Speech-to-text (Vosk) ──────────────────────────────────────────────────
     // (speechService moved to MainControllerSupport — shared across terminal panes)
@@ -47,6 +50,7 @@ public class AppShellController extends ProjectWorkspaceController {
     public AppShellController(Stage stage, ConfigService configService) {
         super(stage, configService);
         focusModeController = new FocusModeController(stage);
+        AppErrorNotifier.setReporter(this::showErrorBanner);
     }
 
     /**
@@ -120,6 +124,7 @@ public class AppShellController extends ProjectWorkspaceController {
 
         HBox topBar = buildTopBar();
         configBanner = buildConfigBanner();
+        errorBanner = buildErrorBanner();
         projectTabsBar = new HBox(8);
         projectTabsBar.setAlignment(Pos.CENTER_LEFT);
         projectTabsBar.setPadding(new Insets(6, 12, 6, 12));
@@ -127,8 +132,7 @@ public class AppShellController extends ProjectWorkspaceController {
         refreshProjectTabsBar();
 
         VBox terminalSection = buildTerminalSection();
-        VBox rightColumn = new VBox(centerStack, sharedPromptPanel.getSelectionsBar(),
-                sharedQuickActionsBar, terminalSeparator, terminalSection);
+        VBox rightColumn = new VBox(centerStack, sharedQuickActionsBar, terminalSeparator, terminalSection);
         Theme.classes(rightColumn, Theme.CL_BG_APP);
         VBox.setVgrow(centerStack, Priority.ALWAYS);
 
@@ -137,7 +141,7 @@ public class AppShellController extends ProjectWorkspaceController {
         SplitPane.setResizableWithParent(leftPaneHost, false);
         Theme.classes(splitPane, Theme.CL_BG_APP);
 
-        VBox dashboard = new VBox(topBar, configBanner, projectTabsBar, splitPane);
+        VBox dashboard = new VBox(topBar, configBanner, errorBanner, projectTabsBar, splitPane);
         VBox.setVgrow(splitPane, Priority.ALWAYS);
         return dashboard;
     }
@@ -158,6 +162,29 @@ public class AppShellController extends ProjectWorkspaceController {
         banner.setAlignment(Pos.CENTER_LEFT);
         UiFactory.hide(banner);
         return banner;
+    }
+
+    /** Builds the dismissible application-error banner shared by UI workflows. */
+    private HBox buildErrorBanner() {
+        Label icon = new Label(Icons.WARNING);
+        icon.getStyleClass().add("error-banner-icon");
+        errorBannerText = new Label();
+        errorBannerText.setWrapText(true);
+        HBox.setHgrow(errorBannerText, Priority.ALWAYS);
+        Button close = UiFactory.errorButton(Icons.CLOSE);
+        close.setTooltip(new Tooltip("Dismiss error"));
+        close.setOnAction(e -> UiFactory.hide(errorBanner));
+        HBox banner = new HBox(10, icon, errorBannerText, close);
+        banner.getStyleClass().add("error-banner");
+        banner.setAlignment(Pos.CENTER_LEFT);
+        UiFactory.hide(banner);
+        return banner;
+    }
+
+    private void showErrorBanner(String message) {
+        if (errorBanner == null) return;
+        errorBannerText.setText(message);
+        UiFactory.setVisible(errorBanner, true);
     }
 
     /** Returns a human-readable list of mandatory config settings that are
@@ -439,6 +466,11 @@ public class AppShellController extends ProjectWorkspaceController {
                 com.conload.ui.projects.ProjectFilesPane pane = projectFilesPanes.get(activeProjectId);
                 if (pane != null) pane.showTaskBadge(label, spin);
             }
+            @Override public void showTaskBadge(String label, boolean spin, java.io.File outputDirectory) {
+                if (activeProjectId == null) return;
+                com.conload.ui.projects.ProjectFilesPane pane = projectFilesPanes.get(activeProjectId);
+                if (pane != null) pane.showTaskBadge(label, spin, outputDirectory);
+            }
             @Override public void hideTaskBadge() {
                 if (activeProjectId == null) return;
                 com.conload.ui.projects.ProjectFilesPane pane = projectFilesPanes.get(activeProjectId);
@@ -684,26 +716,28 @@ public class AppShellController extends ProjectWorkspaceController {
         if (cliTypesContainer == null) return list;
         for (javafx.scene.Node node : cliTypesContainer.getChildren()) {
             if (!(node instanceof HBox hb)) continue;
-            // Each row HBox holds five labeled field boxes + a remove button.
-            // Read the text fields by position (child[N].getChildren().get(1)).
+            // Each row HBox holds six labeled field boxes (5 TextFields + 1
+            // CheckBox) + a Remove button. Read by position (child[N]).
             String[] vals = new String[5];
-            int i = 0;
+            boolean canCompact = false;
+            int textFieldIdx = 0;
             for (javafx.scene.Node child : hb.getChildren()) {
-                if (i >= 5) break; // 6th child is the Remove button
-                if (child instanceof javafx.scene.layout.VBox box && box.getChildren().size() >= 2
-                        && box.getChildren().get(1) instanceof TextField tf) {
-                    vals[i] = tf.getText().strip();
-                } else {
-                    vals[i] = "";
+                if (textFieldIdx >= 5 && !(child instanceof javafx.scene.control.CheckBox)) continue;
+                if (child instanceof javafx.scene.layout.VBox box && box.getChildren().size() >= 2) {
+                    javafx.scene.Node fieldNode = box.getChildren().get(1);
+                    if (fieldNode instanceof TextField tf && textFieldIdx < 5) {
+                        vals[textFieldIdx] = tf.getText().strip();
+                        textFieldIdx++;
+                    } else if (fieldNode instanceof javafx.scene.control.CheckBox cb) {
+                        canCompact = cb.isSelected();
+                    }
                 }
-                i++;
             }
             com.conload.model.CliTypeDefinition def = new com.conload.model.CliTypeDefinition(
-                i > 0 ? vals[0] : "", i > 1 ? vals[1] : "", i > 2 ? vals[2] : "",
-                i > 3 ? vals[3] : "", i > 4 ? vals[4] : "");
+                vals[0], vals[1], vals[2], vals[3], vals[4], canCompact);
             if (def.getLabel().isBlank() && def.getDetectText().isBlank()
                 && def.getListCommand().isBlank() && def.getResumeCommand().isBlank()
-                && def.getExportCommand().isBlank()) continue;
+                && def.getExportCommand().isBlank() && !def.canCompact()) continue;
             list.add(def);
         }
         return list;

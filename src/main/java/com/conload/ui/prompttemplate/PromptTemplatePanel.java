@@ -30,12 +30,11 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /**
  * Prompt template panel displayed between QuickActionsBar and the terminal.
- * Shows: selections list, template selector with CRUD, a minimal apply button
- * for prompt template variables, compiled prompt textarea, and action buttons.
+ * Shows a template selector with CRUD, a minimal apply button for prompt
+ * template variables, compiled prompt textarea, and action buttons.
  */
 public class PromptTemplatePanel extends VBox {
 
@@ -61,32 +60,15 @@ public class PromptTemplatePanel extends VBox {
     private Button expandPromptBtn;
     private Button copyPromptBtn;
 
-    private VBox selectionsListBox;
-    /**
-     * Separately-collapsible selections section (chips + count badge), shown
-     * below the prompt panel and above the quick-actions bar. Owned by this
-     * panel (it owns {@link #selectionsListBox}, {@link #refreshSelectionsList()},
-     * {@link #addFile(File)}, {@link #removeFile(File)}, {@link #clearFiles()})
-     * but exposed via {@link #getSelectionsBar()} so the host (AppShellController)
-     * places it as a sibling of this panel rather than inside it.
-     */
-    private VBox selectionsBar;
-    private Button selectionsToggleBtn;
-    private ScrollPane selectionsScroll;
-    private Label selectionsCountLabel;
-    private boolean selectionsExpanded = false;
     private HBox templateRow;
     private TextArea promptTextArea;
     private ComboBox<String> templateCombo;
     private final Map<String, QuickAction> templateMap = new HashMap<>();
     private QuickAction selectedTemplate = null;
 
-    private final Set<File> selectedFiles = new LinkedHashSet<>();
     private File workDir;
 
-    /** Collapsible prompt area (collapsed by default, opens on template select).
-     *  Note: the selections chip area is NOT inside this VBox — it lives in the
-     *  separate {@link #selectionsBar} node (see {@link #getSelectionsBar()}). */
+    /** Collapsible prompt area (collapsed by default, opens on template select). */
     private VBox promptCollapsible;
     private Button collapseToggleBtn;
     private boolean promptExpanded = false;
@@ -250,29 +232,9 @@ public class PromptTemplatePanel extends VBox {
         this.workDir = dir;
     }
 
-    /** Called by ProjectFilesPane when a file/folder is clicked. Routes to picker mode when active. */
-    public void addFile(File file) {
-        if (isPickerModeActive) {
-            addSelectedContext(file);
-            return;
-        }
-        if (selectedFiles.add(file)) {
-            refreshSelectionsList();
-            updatePromptText();
-        }
-    }
-
-    public void removeFile(File file) {
-        if (selectedFiles.remove(file)) {
-            refreshSelectionsList();
-            updatePromptText();
-        }
-    }
-
-    public void clearFiles() {
-        selectedFiles.clear();
-        refreshSelectionsList();
-        updatePromptText();
+    /** Handles sidebar clicks only while context-picker mode is active. */
+    public void handleFileClick(File file) {
+        if (isPickerModeActive) addSelectedContext(file);
     }
 
     public void refreshTemplates() {
@@ -283,14 +245,12 @@ public class PromptTemplatePanel extends VBox {
 
     private void buildUI() {
         buildTemplateHeader();
-      //  buildSelectionsBar();
         buildPromptEditor();
         buildPickerStatusBar();
         buildPromptEditorOverlay();
 
         getChildren().addAll(templateRow, promptCollapsible);
         loadTemplates();
-        refreshSelectionsList();
     }
 
     private void buildTemplateHeader() {
@@ -420,9 +380,8 @@ public class PromptTemplatePanel extends VBox {
         // ── Clear button ──
         Button clearBtn = UiFactory.actionButton("Clear");
         clearBtn.getStyleClass().addAll("prompt-action-btn", "danger");
-        clearBtn.setTooltip(new Tooltip("Clear selections and prompt"));
+        clearBtn.setTooltip(new Tooltip("Clear prompt"));
         clearBtn.setOnAction(e -> {
-            clearFiles();
             selectedTemplate = null;
             templateCombo.setValue(null);
             promptTextArea.clear();
@@ -440,9 +399,6 @@ public class PromptTemplatePanel extends VBox {
         promptStack.getStyleClass().add("prompt-stack");
 
         // ── Collapsible area: picker bar + (text area + action overlay) ──
-        // (The selections chip area is now in the separate selectionsBar node
-        //  exposed via getSelectionsBar(); it sits below this prompt panel, not
-        //  inside it, so it survives prompt-collapse independently.)
         promptCollapsible = new VBox(4, pickerStatusBar, promptStack);
         promptCollapsible.setPadding(new Insets(4, 8, 4, 8));
         promptCollapsible.getStyleClass().add("prompt-collapsible");
@@ -565,121 +521,6 @@ public class PromptTemplatePanel extends VBox {
         pickerSelectedPaths.clear();
     }
 
-    // ── Selections ────────────────────────────────────────────────────────────
-
-    /**
-     * Builds the separately-collapsible selections section: a header row
-     * ({@code ▶ Selections (N)} toggle + count badge) and the chip {@link ScrollPane}.
-     * Collapsed by default. Exposed via {@link #getSelectionsBar()} so the host
-     * (AppShellController) places it as a sibling of this panel — below the
-     * prompt, above the quick-actions bar.
-     */
-    private void buildSelectionsBar() {
-        selectionsListBox = new VBox(3);
-        selectionsListBox.setPadding(new Insets(2));
-        Theme.classes(selectionsListBox, Theme.CL_BG_APP);
-
-        selectionsScroll = new ScrollPane(selectionsListBox);
-        selectionsScroll.setFitToWidth(true);
-        selectionsScroll.setPrefHeight(60);
-        selectionsScroll.setMaxHeight(90);
-        selectionsScroll.setMinHeight(30);
-        selectionsScroll.getStyleClass().add("scroll-transparent");
-
-        selectionsCountLabel = new Label("");
-        selectionsCountLabel.getStyleClass().add("selections-count-badge");
-
-        selectionsToggleBtn = new Button("Selections " + Icons.BULLET);   // collapsed → ›
-        selectionsToggleBtn.getStyleClass().addAll("icon-button", "selections-toggle-btn");
-        selectionsToggleBtn.setTooltip(new Tooltip("Show selected files"));
-        pinButtonWidth(selectionsToggleBtn);
-        selectionsToggleBtn.setOnAction(e -> toggleSelectionsExpanded());
-
-        HBox selectionsHeader = new HBox(6, selectionsToggleBtn, selectionsCountLabel);
-        selectionsHeader.setAlignment(Pos.CENTER_LEFT);
-        selectionsHeader.setPadding(new Insets(3, 10, 3, 10));
-
-        selectionsBar = new VBox(4, selectionsHeader, selectionsScroll);
-        VBox.setMargin(selectionsBar, new Insets(0, 4, 0, 4));
-        // Collapsed by default — hide the chip scroll content; keep the header visible.
-        UiFactory.hide(selectionsScroll);
-        updateSelectionsHeader();
-    }
-
-    /** Toggle the selections section between collapsed and expanded. */
-    private void toggleSelectionsExpanded() {
-        setSelectionsExpanded(!selectionsExpanded);
-    }
-
-    /** Expand or collapse the selections section. */
-    private void setSelectionsExpanded(boolean expanded) {
-        selectionsExpanded = expanded;
-        UiFactory.setVisible(selectionsScroll, expanded);
-        // Collapsed = › (after text); Expanded = ⌄ (after text) — open chevrons
-        // matching the tree disclosure convention.
-        selectionsToggleBtn.setText(expanded ? "Selections " + Icons.CHEVRON_DOWN
-                                             : "Selections " + Icons.BULLET);
-        selectionsToggleBtn.setTooltip(new Tooltip(expanded ? "Hide selected files" : "Show selected files"));
-        updateSelectionsHeader();
-    }
-
-    /** Refresh the collapsed-state count badge next to the toggle button. */
-    private void updateSelectionsHeader() {
-        int n = selectedFiles.size();
-        selectionsCountLabel.setText(n > 0 ? "(" + n + ")" : "");
-    }
-
-    /** Public accessor so the host (AppShellController) can place this node
-     *  between the prompt panel and the quick-actions bar in the right column.
-     *  Returns {@code null} before {@link #buildUI()} has run. */
-    public VBox getSelectionsBar() {
-        return selectionsBar;
-    }
-
-    private void refreshSelectionsList() {
-        selectionsListBox.getChildren().clear();
-        if (selectedFiles.isEmpty()) {
-            Label placeholder = new Label("");
-            placeholder.getStyleClass().add("placeholder");
-            selectionsListBox.getChildren().add(placeholder);
-            updateSelectionsHeader();
-            UiFactory.setVisible(selectionsBar, false);
-            return;
-        }
-
-        FlowPane chipsRow = new FlowPane(4, 4);
-        chipsRow.setAlignment(Pos.CENTER_LEFT);
-        for (File f : selectedFiles) {
-            String relPath = getRelativePath(f);
-            Label chip = new Label(relPath);
-            chip.getStyleClass().add("chip");
-
-            Button rm = new Button(Icons.CLOSE);
-            rm.getStyleClass().add("remove-button");
-            rm.getStyleClass().add("icon");
-            rm.setOnAction(e -> removeFile(f));
-
-            HBox chipBox = new HBox(2, chip, rm);
-            chipBox.setAlignment(Pos.CENTER_LEFT);
-            chipsRow.getChildren().add(chipBox);
-        }
-        selectionsListBox.getChildren().add(chipsRow);
-        updateSelectionsHeader();
-        UiFactory.setVisible(selectionsBar, true);
-    }
-
-    private void updatePromptText() {
-        if (selectedTemplate != null) return;
-        if (selectedFiles.isEmpty()) {
-            promptTextArea.setText("");
-            return;
-        }
-        String paths = selectedFiles.stream()
-                .map(this::getRelativePath)
-                .collect(Collectors.joining(", "));
-        promptTextArea.setText("use these packages and classes and files for research: " + paths);
-    }
-
     // ── Template Management ───────────────────────────────────────────────────
 
     private void loadTemplates() {
@@ -704,7 +545,7 @@ public class PromptTemplatePanel extends VBox {
         String selected = templateCombo.getValue();
         if (selected == null || selected.isEmpty()) {
             selectedTemplate = null;
-            updatePromptText();
+            promptTextArea.clear();
             return;
         }
         selectedTemplate = templateMap.get(selected);

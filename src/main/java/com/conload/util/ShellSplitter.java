@@ -10,7 +10,7 @@ import java.util.List;
  * mechanism) to match the most common simple case. Whitespace outside
  * quotes separates arguments. Returns an empty array for blank input.
  *
- * <p>Extracted from {@link com.conload.service.OpencodeSessionService} as a
+ * <p>Extracted from the session-processing layer as a
  * reusable utility.
  */
 public final class ShellSplitter {

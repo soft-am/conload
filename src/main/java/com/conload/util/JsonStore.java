@@ -16,7 +16,7 @@ import java.util.function.Supplier;
  * <p>Replaces the duplicated {@code load()/save()} boilerplate that previously
  * appeared in {@code ProjectService}, {@code QuickActionService},
  * {@code OpenTabsService}, {@code PidRegistryService}, and
- * {@code OpencodeSessionService} — each carrying its own {@code ObjectMapper}
+ * {@code SessionProcessor} — each carrying its own {@code ObjectMapper}
  * field, its own {@code Files.exists} guard, and its own catch-and-log.
  *
  * <p>Usage:

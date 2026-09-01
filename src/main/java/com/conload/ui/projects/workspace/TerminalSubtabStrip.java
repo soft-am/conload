@@ -58,13 +58,7 @@ public final class TerminalSubtabStrip extends HBox {
             int idx = i;
             boolean isActive = (i == active);
             boolean busy = group.terminals().get(i).busyProperty().get();
-            String label;
-            if (isActive) {
-                String sl = group.terminals().get(i).sessionLabel();
-                label = (sl != null && !sl.isBlank()) ? sl : String.valueOf(i + 1);
-            } else {
-                label = String.valueOf(i + 1);
-            }
+            String label = String.valueOf(i + 1);
             Button pill = new Button(label);
             pill.getStyleClass().addAll("app-button", "terminal-subtab");
             if (isActive) pill.getStyleClass().add("active");

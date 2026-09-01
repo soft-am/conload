@@ -1,4 +1,4 @@
-package com.conload.ui.projects;
+package com.conload.ui.createcontext;
 
 import com.conload.confluence.ConfluenceClient;
 import com.conload.model.AppConfig;
@@ -46,7 +46,7 @@ import java.util.function.Supplier;
  * Context") and {@link SourceInputClassifier} for URL parsing, so the
  * Confluence-to-Markdown pipeline is identical to the search/download flow.
  */
-final class ConfluenceProjectCreator {
+public final class ConfluenceProjectCreator {
 
     private final Stage owner;
     private final Supplier<AppConfig> configSupplier;
@@ -61,10 +61,10 @@ final class ConfluenceProjectCreator {
     private Button downloadBtn;
     private ProgressIndicator spinner;
 
-    ConfluenceProjectCreator(Stage owner, Supplier<AppConfig> configSupplier,
-                             ProjectService projectService,
-                             Consumer<String> logger,
-                             Consumer<Project> onProjectReady) {
+    public ConfluenceProjectCreator(Stage owner, Supplier<AppConfig> configSupplier,
+                                    ProjectService projectService,
+                                    Consumer<String> logger,
+                                    Consumer<Project> onProjectReady) {
         this.owner = owner;
         this.configSupplier = configSupplier;
         this.projectService = projectService;
@@ -72,7 +72,7 @@ final class ConfluenceProjectCreator {
         this.onProjectReady = onProjectReady;
     }
 
-    void show() {
+    public void show() {
         AppConfig config = configSupplier.get();
         if (config.getUsername().isBlank() || config.getToken().isBlank()) {
             alert("Missing Credentials",

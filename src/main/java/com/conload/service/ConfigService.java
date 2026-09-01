@@ -131,7 +131,8 @@ public class ConfigService {
             String listCmd   = props.getProperty(pfx + "listCommand",   "").strip();
             String resumeCmd = props.getProperty(pfx + "resumeCommand", "").strip();
             String exportCmd = props.getProperty(pfx + "exportCommand", "").strip();
-            list.add(new CliTypeDefinition(label, detect, listCmd, resumeCmd, exportCmd));
+            boolean canCompact = Boolean.parseBoolean(props.getProperty(pfx + "canCompact", "false").strip());
+            list.add(new CliTypeDefinition(label, detect, listCmd, resumeCmd, exportCmd, canCompact));
         }
         return list;
     }
@@ -153,7 +154,7 @@ public class ConfigService {
             if (d == null) continue;
             if (d.getLabel().isBlank() && d.getDetectText().isBlank()
                 && d.getListCommand().isBlank() && d.getResumeCommand().isBlank()
-                && d.getExportCommand().isBlank()) continue;
+                && d.getExportCommand().isBlank() && !d.canCompact()) continue;
             clean.add(d);
         }
         props.setProperty("cli.count", String.valueOf(clean.size()));
@@ -165,6 +166,7 @@ public class ConfigService {
             props.setProperty(pfx + "listCommand",   d.getListCommand());
             props.setProperty(pfx + "resumeCommand", d.getResumeCommand());
             props.setProperty(pfx + "exportCommand", d.getExportCommand());
+            props.setProperty(pfx + "canCompact",   Boolean.toString(d.canCompact()));
         }
     }
 

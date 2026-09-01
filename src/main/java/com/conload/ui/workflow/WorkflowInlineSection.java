@@ -220,7 +220,7 @@ public final class WorkflowInlineSection extends VBox {
         gatheringCancelled = false;
         gatherErrors.clear();
         progressLabel.getStyleClass().remove("workflow-progress-warning");
-        host.showTaskBadge("Gathering…", true);
+        host.showTaskBadge("Gathering…", true, host.contextsDir().toFile());
 
         WorkflowEnvironment env = new WorkflowEnvironment(
                 host.config(), host.githubToken(), host.githubApiUrl(), host.workspacePath(),

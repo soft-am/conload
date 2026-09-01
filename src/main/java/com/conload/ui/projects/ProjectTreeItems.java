@@ -1,5 +1,6 @@
 package com.conload.ui.projects;
 
+import com.conload.ui.projects.files.ConfluencePageTree;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.TreeItem;
@@ -80,7 +81,11 @@ public final class ProjectTreeItems {
             }
             if (rootMd.isEmpty() && media == null && jira == null && github == null)
                 return sorted(Arrays.asList(folder.listFiles()));
-            List<TreeItem<File>> result = new java.util.ArrayList<>(sorted(rootMd));
+            List<TreeItem<File>> result;
+            if (ConfluencePageTree.isConfluencePageLot(folder))
+                result = new java.util.ArrayList<>(ConfluencePageTree.buildNestedTree(folder));
+            else
+                result = new java.util.ArrayList<>(sorted(rootMd));
             result.addAll(sorted(other));
             if (media != null) result.addAll(children(media));
             if (jira != null) result.addAll(children(jira));
@@ -106,10 +111,8 @@ public final class ProjectTreeItems {
         @Override public boolean isLeaf() { return sourceChildren.isEmpty(); }
     }
 
-    public static class SessionLeafItem extends TreeItem<File> {
+    public static class SessionLeafItem extends FileTreeItem {
         public SessionLeafItem(File file) { super(file); }
-        @Override public boolean isLeaf() { return true; }
-        @Override public ObservableList<TreeItem<File>> getChildren() { return FXCollections.emptyObservableList(); }
     }
 
     public static class FileTreeItem extends TreeItem<File> {
