@@ -21,6 +21,7 @@ import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 
 import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 
 /** Owns download controls and progress presentation, independent of its host controller. */
 public final class DownloadProgressPane {
@@ -35,6 +36,9 @@ public final class DownloadProgressPane {
     private final TitledPane logPane;
     private final VBox inProgressView;
     private final BooleanSupplier hasResults;
+    private final ProgressBar searchProgressBar = new ProgressBar();
+    private final Label searchStatusLabel = new Label("");
+    private final HBox searchStatusRow;
     private Timeline ellipsisTimeline;
     private int ellipsisIndex;
 
@@ -72,10 +76,20 @@ public final class DownloadProgressPane {
         logPane.getStyleClass().add("progress-log-pane");
         VBox.setVgrow(logPane, Priority.NEVER);
         inProgressView = buildInProgressView();
+        searchProgressBar.setPrefWidth(Double.MAX_VALUE);
+        searchProgressBar.setPrefHeight(4);
+        searchProgressBar.setProgress(ProgressBar.INDETERMINATE_PROGRESS);
+        searchProgressBar.getStyleClass().add("search-progress-bar");
+        UiFactory.hide(searchProgressBar);
+        searchStatusLabel.getStyleClass().add("status");
+        searchStatusRow = new HBox(6, searchStatusLabel, UiFactory.hSpacer());
+        searchStatusRow.setAlignment(Pos.CENTER_LEFT);
+        UiFactory.hide(searchStatusRow);
     }
 
     public VBox buildFooter() {
-        VBox footer = new VBox(0, buttonRow, progressBar, statusLabel, logPane);
+        VBox footer = new VBox(0, buttonRow, progressBar, statusLabel,
+                searchProgressBar, searchStatusRow, logPane);
         footer.setPadding(new Insets(0, 22, 14, 22));
         Theme.classes(footer, Theme.CL_BG_APP);
         return footer;
@@ -90,6 +104,9 @@ public final class DownloadProgressPane {
     public Label statusLabel() { return statusLabel; }
     public TextArea logArea() { return logArea; }
     public TitledPane logPane() { return logPane; }
+    public ProgressBar searchProgressBar() { return searchProgressBar; }
+    public Label searchStatusLabel() { return searchStatusLabel; }
+    public HBox searchStatusRow() { return searchStatusRow; }
 
     public void setRunning(boolean running) {
         startButton.setDisable(running || !hasResults.getAsBoolean());
@@ -109,6 +126,27 @@ public final class DownloadProgressPane {
         UiFactory.setVisible(buttonRow, available);
     }
 
+    /** Toggles search-progress presentation: indeterminate bar + status label
+     *  above the (auto-expanded) progress log. */
+    public void setSearching(boolean searching) {
+        UiFactory.setVisible(searchProgressBar, searching);
+        UiFactory.setVisible(searchStatusRow, searching);
+        if (searching) {
+            searchProgressBar.setProgress(ProgressBar.INDETERMINATE_PROGRESS);
+            logPane.setExpanded(true);
+            startEllipsisAnimation();
+        } else {
+            stopEllipsisAnimation();
+        }
+    }
+
+    /** Updates the search status label text and style class. */
+    public void setSearchStatus(String msg, String styleKey) {
+        searchStatusLabel.setText(msg);
+        searchStatusLabel.getStyleClass().removeAll("success", "warning", "error");
+        if (styleKey != null) searchStatusLabel.getStyleClass().add(styleKey);
+    }
+
     public void appendLog(String message) {
         Platform.runLater(() -> {
             logArea.appendText(message + "\n");
@@ -121,6 +159,9 @@ public final class DownloadProgressPane {
         progressBar.setProgress(0);
         statusLabel.textProperty().unbind();
         statusLabel.setText("");
+        searchStatusLabel.setText("");
+        searchStatusLabel.getStyleClass().removeAll("success", "warning", "error");
+        setSearching(false);
     }
 
     private VBox buildInProgressView() {

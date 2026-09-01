@@ -149,7 +149,7 @@ public final class SearchExecutionController {
             if (criterion.badge != null) criterion.badge.setText(Icons.DOT);
         }
         cancelled.set(false);
-        ui.searchButton().setDisable(true);
+        if (ui.searchButton() != null) ui.searchButton().setDisable(true);
         ui.stopButton().setDisable(false);
         setStatus(Icons.LOADING + "  Searching — please wait…", null);
         ui.setSearching().accept(true);
@@ -169,6 +169,7 @@ public final class SearchExecutionController {
 
     private void finishSuccess(SearchResults results, SearchPlan plan) {
         ui.stopButton().setDisable(true);
+        ui.setSearching().accept(false);
         ui.updateButtons().run();
         setAllSpinners(false);
         ui.showResults().run();

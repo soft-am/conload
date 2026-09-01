@@ -530,7 +530,8 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
         if (terminalSection != null) VBox.setVgrow(terminalSection, Priority.NEVER);
         if (terminalHost != null) VBox.setVgrow(terminalHost, Priority.NEVER);
 
-        Region downloadPane = buildDownloadTab();
+        if (cachedDownloadPane == null) cachedDownloadPane = buildDownloadTab();
+        Region downloadPane = cachedDownloadPane;
 
         // Compact top panel: back navigation + "Context Management" title.
         // Very small height (one line, tight vertical padding, bordered bottom).
@@ -552,7 +553,7 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
         Theme.classes(wrapper, Theme.CL_BG_APP);
         VBox.setVgrow(downloadPane, Priority.ALWAYS);
         contentArea.getChildren().setAll(wrapper);
-        Platform.runLater(this::openSearchDialog);
+        if (!isSearchRunning()) Platform.runLater(this::openSearchDialog);
     }
 
 

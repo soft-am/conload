@@ -823,6 +823,9 @@
 .titled-pane > .content { -fx-border-width: 0 1 1 1; }
 .progress-log-pane > .title > .text { -fx-font-weight: normal; -fx-fill: -app-muted; }
 .progress-log-pane > .content { -fx-background-color: -app-log; }
+.search-progress-bar { -fx-pref-height: 4; -fx-max-height: 4; }
+.search-progress-bar > .bar { -fx-background-color: -accent-color; }
+.search-progress-bar > .track { -fx-background-color: -app-panel; }
 .tree-cell { -fx-cell-size: 38px; }
 .tree-cell .tree-disclosure-node { -fx-padding: 0 8 0 8; }
 .tree-cell .tree-disclosure-node .arrow { -fx-shape: "M2,1 L7,5 L2,9 L3,9 L8,5 L3,1 Z"; -fx-scale-x: 1; -fx-scale-y: 1; }
