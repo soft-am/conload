@@ -1,0 +1,90 @@
+# Keeps the Homebrew formula in soft-am/homebrew-tap in sync with the
+# latest published release of conload.
+#
+# Triggers:
+#   - release: published  (fires automatically when release.yml publishes
+#                          a new GitHub Release)
+#   - workflow_dispatch   (manual re-run from the Actions tab — use this to
+#                          (re)seed the tap after adding the
+#                          HOMEBREW_TAP_TOKEN secret)
+#
+# Flow: resolve the latest release tag → download conload-mac.jar and
+# conload-linux.jar from the release → compute sha256 → substitute into
+# Formula/conload.rb.template → clone soft-am/homebrew-tap and push the
+# regenerated Formula/conload.rb.
+#
+# Requires the HOMEBREW_TAP_TOKEN repo secret in soft-am/conload: a
+# fine-grained PAT with Contents: Read and write on soft-am/homebrew-tap
+# only. The default GITHUB_TOKEN cannot push cross-repository.
+#
+# Users install with:  brew install soft-am/tap/conload
+
+name: Update Homebrew tap formula
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  update-formula:
+    name: Push formula to soft-am/homebrew-tap
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Always read the template from the default branch (latest),
+          # regardless of which release event triggered this run.
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 1
+      - name: Resolve latest release tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
+          VERSION="${TAG#v}"
+          {
+            echo "TAG=$TAG"
+            echo "VERSION=$VERSION"
+          } >> "$GITHUB_ENV"
+          echo "Syncing Homebrew formula for release $TAG"
+      - name: Download JARs and compute sha256
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p /tmp/jars
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" \
+            -p "conload-mac.jar" -p "conload-linux.jar" -D /tmp/jars
+          {
+            echo "MAC_SHA=$(sha256sum /tmp/jars/conload-mac.jar | cut -d' ' -f1)"
+            echo "LINUX_SHA=$(sha256sum /tmp/jars/conload-linux.jar | cut -d' ' -f1)"
+          } >> "$GITHUB_ENV"
+      - name: Generate formula content from template
+        run: |
+          sed -e "s/__VERSION__/${VERSION}/g" \
+              -e "s/__MAC_SHA__/${MAC_SHA}/g" \
+              -e "s/__LINUX_SHA__/${LINUX_SHA}/g" \
+              Formula/conload.rb.template > /tmp/conload.rb
+          cat /tmp/conload.rb
+      - name: Push formula to soft-am/homebrew-tap
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          git clone --depth 1 "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/soft-am/homebrew-tap.git" /tmp/tap
+          mkdir -p /tmp/tap/Formula
+          cp /tmp/conload.rb /tmp/tap/Formula/conload.rb
+          cd /tmp/tap
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/conload.rb
+          # Freshly-created (empty) tap has no commits — skip the
+          # "nothing changed" check when HEAD does not exist yet.
+          if git rev-parse HEAD >/dev/null 2>&1 && git diff --cached --quiet; then
+            echo "Formula unchanged — nothing to commit."
+            exit 0
+          fi
+          git commit -m "chore(formula): bump conload to v${VERSION}"
+          git push origin HEAD

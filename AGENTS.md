@@ -44,12 +44,15 @@ version-less names (`conload.dmg` etc.) so README download links survive
 version bumps. Release assets are hosted on the public `soft-am/conload`
 GitHub repo and attached to each tag's Release by the CI workflow.
 
-The same workflow's `update-formula` job pushes the regenerated Homebrew formula
-to the public `soft-am/homebrew-tap` repo (single source of truth) — generated from
-`Formula/conload.rb.template` in this repo at tag time, using the `HOMEBREW_TAP_TOKEN`
-repo secret (fine-grained PAT, Contents:write on the tap repo only). Users install with:
+A separate workflow, `.github/workflows/update-formula.yml`, pushes the
+regenerated Homebrew formula to the public `soft-am/homebrew-tap` repo (single
+source of truth) — generated from `Formula/conload.rb.template` in this repo,
+triggered automatically when a Release is published or manually from the
+Actions tab, using the `HOMEBREW_TAP_TOKEN` repo secret (fine-grained PAT,
+Contents:write on the tap repo only). Users install with:
 `brew install soft-am/tap/conload` (macOS + Linuxbrew, pulls in `openjdk@21`).
-The tap repo must exist and contain the secret before the first tagged release runs.
+The tap repo must exist and contain the secret before the formula sync can
+succeed ("Update Homebrew tap formula" workflow run).
 
 Run `mvn -DskipTests package` after every change. BUILD SUCCESS = green.
 

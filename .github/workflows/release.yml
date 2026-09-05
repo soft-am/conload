@@ -1,8 +1,6 @@
 # Builds native installers (.dmg / .exe / .deb / .rpm) AND per-OS
 # distribution JARs on 3 OS runners, then publishes them all as GitHub
-# Release assets whenever a v* tag is pushed. Finally, the update-formula
-# job pushes the regenerated Homebrew formula to soft-am/homebrew-tap
-# (install: brew install soft-am/tap/conload).
+# Release assets whenever a v* tag is pushed.
 #
 # Usage:
 #   git tag v1.0.1
@@ -168,56 +166,5 @@ jobs:
           generate_release_notes: true
           files: assets/*
 
-  # Regenerates the Homebrew formula and pushes it to the public tap
-  # repository soft-am/homebrew-tap (single source of truth for the formula).
-  # Substitutes version + sha256 of the published conload-mac.jar /
-  # conload-linux.jar from this release into Formula/conload.rb.template.
-  # Requires the HOMEBREW_TAP_TOKEN repo secret (fine-grained PAT with
-  # Contents: Read and write on soft-am/homebrew-tap only).
-  # Users install with:  brew install soft-am/tap/conload
-  update-formula:
-    name: Update Homebrew tap formula
-    needs: release
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-      - name: Download JARs from the release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          VERSION="${TAG#v}"
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          mkdir -p /tmp/jars
-          gh release download "$TAG" -R "$GITHUB_REPOSITORY" \
-            -p "conload-mac.jar" -p "conload-linux.jar" -D /tmp/jars
-      - name: Compute sha256 checksums
-        run: |
-          echo "MAC_SHA=$(sha256sum /tmp/jars/conload-mac.jar | cut -d' ' -f1)" >> "$GITHUB_ENV"
-          echo "LINUX_SHA=$(sha256sum /tmp/jars/conload-linux.jar | cut -d' ' -f1)" >> "$GITHUB_ENV"
-      - name: Generate formula content from template
-        run: |
-          sed -e "s/__VERSION__/${VERSION}/g" \
-              -e "s/__MAC_SHA__/${MAC_SHA}/g" \
-              -e "s/__LINUX_SHA__/${LINUX_SHA}/g" \
-              Formula/conload.rb.template > /tmp/conload.rb
-          cat /tmp/conload.rb
-      - name: Push formula to soft-am/homebrew-tap
-        env:
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-        run: |
-          git clone --depth 1 "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/soft-am/homebrew-tap.git" /tmp/tap
-          mkdir -p /tmp/tap/Formula
-          cp /tmp/conload.rb /tmp/tap/Formula/conload.rb
-          cd /tmp/tap
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Formula/conload.rb
-          if git diff --cached --quiet; then
-            echo "Formula unchanged — nothing to commit."
-            exit 0
-          fi
-          git commit -m "chore(formula): bump conload to v${VERSION}"
-          git push
+# The Homebrew formula sync lives in .github/workflows/update-formula.yml
+# (separate workflow, triggered when this release is published).
