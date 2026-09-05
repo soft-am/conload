@@ -57,6 +57,14 @@ public interface WorkflowHost {
         showTaskBadge(label, spin);
     }
 
+    /** Show a badge owned by one activity, allowing concurrent activities. */
+    default void showTaskBadge(String key, String label, boolean spin, File outputDirectory) {
+        showTaskBadge(label, spin, outputDirectory);
+    }
+
     /** Hide the sidebar task badge on the active project's pane. */
     default void hideTaskBadge() {}
+
+    /** Hide only the badge owned by {@code key}. */
+    default void hideTaskBadge(String key) { hideTaskBadge(); }
 }

@@ -17,6 +17,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -54,10 +55,8 @@ public class ProjectFilesPane extends VBox {
     private Button codeToggleBtn;
     private Button contextToggleBtn;
     private Button codeRefreshBtn;
-    private HBox taskBadgeBox;
     private HBox taskBadgeHeader;
-    private ProgressIndicator taskBadgeSpinner;
-    private Label taskBadgeLabel;
+    private VBox taskBadgeRows;
     private String projectName = "";
     private RobotIndicator.Character projectCharacter;
     private String accentColor = "";
@@ -65,9 +64,30 @@ public class ProjectFilesPane extends VBox {
     private Set<String> sessionFolderPaths = new HashSet<>();
     private VBox codeSectionView;
     private VBox contextSectionView;
-    private javafx.animation.Timeline taskBadgeCountTimeline;
-    private final AtomicBoolean taskBadgeCountInFlight = new AtomicBoolean();
-    private long taskBadgeCountVersion;
+    private final Map<String, TaskBadgeRow> taskBadges = new LinkedHashMap<>();
+
+    private final class TaskBadgeRow {
+        private final HBox box = new HBox(6);
+        private final ProgressIndicator spinner = new ProgressIndicator();
+        private final Label label = new Label();
+        private final AtomicBoolean countInFlight = new AtomicBoolean();
+        private javafx.animation.Timeline countTimeline;
+        private File outputDirectory;
+        private long initialCount = -1;
+
+        private TaskBadgeRow() {
+            spinner.getStyleClass().add("download-spinner");
+            label.getStyleClass().addAll("small", "muted");
+            box.getChildren().addAll(spinner, label);
+            box.getStyleClass().add("task-badge-box");
+            box.setAlignment(Pos.CENTER_LEFT);
+            box.setOnMouseClicked(e -> { if (onTaskBadgeClick != null) onTaskBadgeClick.run(); });
+        }
+
+        private void stopCount() {
+            if (countTimeline != null) { countTimeline.stop(); countTimeline = null; }
+        }
+    }
 
     public ProjectFilesPane(File workDir, Consumer<File> onFileClick) {
         this.workDir = workDir;
@@ -148,54 +168,69 @@ public class ProjectFilesPane extends VBox {
         for (TreeItem<File> child : node.getChildren()) { TreeItem<File> found = findAndExpand(child, target); if (found != null) { node.setExpanded(true); return found; } }
         return null;
     }
-    public void showTaskBadge(String label) { showTaskBadge(label, true, null); }
-    public void showTaskBadge(String label, boolean spin) { showTaskBadge(label, spin, null); }
+    public void showTaskBadge(String label) { showTaskBadge("main", label, true, null); }
+    public void showTaskBadge(String label, boolean spin) { showTaskBadge("main", label, spin, null); }
     public void showTaskBadge(String label, boolean spin, File outputDirectory) {
+        showTaskBadge("main", label, spin, outputDirectory);
+    }
+    public void showTaskBadge(String key, String label) {
+        showTaskBadge(key, label, true, null);
+    }
+
+    public void showTaskBadge(String key, String label, boolean spin, File outputDirectory) {
         javafx.application.Platform.runLater(() -> {
-            stopTaskBadgeCount();
-            long countVersion = ++taskBadgeCountVersion;
-            taskBadgeLabel.setText(label == null ? "" : label);
-            UiFactory.setVisible(taskBadgeSpinner, spin);
-            taskBadgeBox.setVisible(true);
-            taskBadgeBox.setManaged(true);
+            TaskBadgeRow row = taskBadges.computeIfAbsent(key, ignored -> {
+                TaskBadgeRow created = new TaskBadgeRow();
+                taskBadgeRows.getChildren().add(created.box);
+                return created;
+            });
+            row.label.setText(label == null ? "" : label);
+            UiFactory.setVisible(row.spinner, spin);
+            row.outputDirectory = outputDirectory;
+            row.stopCount();
+            if (spin && outputDirectory != null) startTaskBadgeCount(row);
             taskBadgeHeader.setVisible(true);
             taskBadgeHeader.setManaged(true);
-            if (spin && outputDirectory != null) startTaskBadgeCount(label, outputDirectory, countVersion);
         });
     }
 
-    public void hideTaskBadge() {
+    public void hideTaskBadge() { hideTaskBadge("main"); }
+
+    public void hideTaskBadge(String key) {
         javafx.application.Platform.runLater(() -> {
-            stopTaskBadgeCount();
-            taskBadgeCountVersion++;
-            taskBadgeBox.setVisible(false);
-            taskBadgeBox.setManaged(false);
-            taskBadgeHeader.setVisible(false);
-            taskBadgeHeader.setManaged(false);
+            TaskBadgeRow row = taskBadges.remove(key);
+            if (row == null) return;
+            row.stopCount();
+            taskBadgeRows.getChildren().remove(row.box);
+            boolean visible = !taskBadges.isEmpty();
+            taskBadgeHeader.setVisible(visible);
+            taskBadgeHeader.setManaged(visible);
         });
     }
 
-    private void startTaskBadgeCount(String label, File outputDirectory, long countVersion) {
+    private void startTaskBadgeCount(TaskBadgeRow row) {
         Thread.startVirtualThread(() -> {
-            long initialCount = countFiles(outputDirectory);
+            if (row.initialCount < 0) row.initialCount = countFiles(row.outputDirectory);
             javafx.application.Platform.runLater(() -> {
-                if (countVersion != taskBadgeCountVersion) return;
-                taskBadgeCountTimeline = new javafx.animation.Timeline(new javafx.animation.KeyFrame(
-                        javafx.util.Duration.millis(500), event -> updateTaskBadgeCount(label, outputDirectory, initialCount, countVersion)));
-                taskBadgeCountTimeline.setCycleCount(javafx.animation.Animation.INDEFINITE);
-                taskBadgeCountTimeline.play();
+                if (!taskBadges.containsValue(row)) return;
+                row.countTimeline = new javafx.animation.Timeline(new javafx.animation.KeyFrame(
+                        javafx.util.Duration.millis(500), event -> updateTaskBadgeCount(row)));
+                row.countTimeline.setCycleCount(javafx.animation.Animation.INDEFINITE);
+                row.countTimeline.play();
             });
         });
     }
 
-    private void updateTaskBadgeCount(String label, File outputDirectory, long initialCount, long countVersion) {
-        if (!taskBadgeCountInFlight.compareAndSet(false, true)) return;
+    private void updateTaskBadgeCount(TaskBadgeRow row) {
+        if (!row.countInFlight.compareAndSet(false, true)) return;
         Thread.startVirtualThread(() -> {
-            long addedFiles = Math.max(0, countFiles(outputDirectory) - initialCount);
+            long addedFiles = Math.max(0, countFiles(row.outputDirectory) - row.initialCount);
             javafx.application.Platform.runLater(() -> {
-                if (countVersion == taskBadgeCountVersion && taskBadgeCountTimeline != null)
-                    taskBadgeLabel.setText(label + " (" + addedFiles + " files)");
-                taskBadgeCountInFlight.set(false);
+                if (taskBadges.containsValue(row)) {
+                    String base = row.label.getText().replaceFirst(" \\(\\d+ files\\)$", "");
+                    row.label.setText(base + " (" + addedFiles + " files)");
+                }
+                row.countInFlight.set(false);
             });
         });
     }
@@ -209,12 +244,6 @@ public class ProjectFilesPane extends VBox {
         }
     }
 
-    private void stopTaskBadgeCount() {
-        if (taskBadgeCountTimeline != null) {
-            taskBadgeCountTimeline.stop();
-            taskBadgeCountTimeline = null;
-        }
-    }
     public void setOnTaskBadgeClick(Runnable callback) { onTaskBadgeClick = callback; }
 
     private void buildUI() {
@@ -260,13 +289,16 @@ public class ProjectFilesPane extends VBox {
         TreeItem<File> selected = allTreeViews().stream().filter(tv -> tv != null).map(tv -> tv.getSelectionModel().getSelectedItem()).filter(i -> i != null).findFirst().orElse(null);
         File target = selected != null && selected.getValue() != null && selected.getValue().isDirectory() ? selected.getValue() : workDir;
         MenuItem local = new MenuItem("Add Context (link local folder)"); local.setOnAction(e -> invokeDirectoryCallback(onAddLocalContext, target));
-        MenuItem download = new MenuItem("Download Context (Jira/Confluence/GitHub)"); download.setOnAction(e -> invokeDirectoryCallback(onDownloadContext, target));
+        MenuItem download = new MenuItem("Add Context (Jira/Confluence/GitHub)"); download.setOnAction(e -> invokeDirectoryCallback(onDownloadContext, target));
         new ContextMenu(local, download).show(addContextBtn, javafx.geometry.Side.BOTTOM, 0, 0);
     }
     private void invokeDirectoryCallback(Consumer<File> callback, File target) { if (callback != null && target != null && target.isDirectory()) callback.accept(target); }
     private HBox buildTaskBadgeHeader() {
-        taskBadgeSpinner = new ProgressIndicator(); taskBadgeSpinner.getStyleClass().add("download-spinner"); taskBadgeLabel = new Label("Exporting…"); taskBadgeLabel.getStyleClass().addAll("small", "muted"); taskBadgeBox = new HBox(6, taskBadgeSpinner, taskBadgeLabel); taskBadgeBox.getStyleClass().add("task-badge-box"); taskBadgeBox.setAlignment(Pos.CENTER_LEFT); taskBadgeBox.setVisible(false); taskBadgeBox.setManaged(false); taskBadgeBox.setOnMouseClicked(e -> { if (onTaskBadgeClick != null) onTaskBadgeClick.run(); });
-        HBox header = new HBox(8, taskBadgeBox, UiFactory.hSpacer()); header.setAlignment(Pos.CENTER_LEFT); header.setPadding(new Insets(4, 10, 4, 10)); header.getStyleClass().add("panel-border-bottom"); header.setManaged(false); header.setVisible(false); return header;
+        taskBadgeRows = new VBox(2);
+        HBox header = new HBox(8, taskBadgeRows, UiFactory.hSpacer());
+        header.setAlignment(Pos.CENTER_LEFT); header.setPadding(new Insets(4, 10, 4, 10));
+        header.getStyleClass().add("panel-border-bottom"); header.setManaged(false); header.setVisible(false);
+        return header;
     }
     private TreeView<File> buildTreeView(TreeItem<File> root) {
         TreeView<File> view = new TreeView<>(root); view.setShowRoot(false); view.getStyleClass().add("project-files-tree");

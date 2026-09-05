@@ -753,6 +753,7 @@
 .prompt-header-text { -fx-font-size: -font-xl; -fx-text-fill: -app-text; }
 .prompt-template-row .sparkle-seg { -fx-fill: -accent-color; }
 .prompt-template-row .workflow-seg { -fx-fill: -accent-color; }
+.context-header-title { -fx-font-size: -font-xl; -fx-font-weight: bold; }
 .prompt-template-combo { -fx-max-width: 300; }
 .prompt-send-btn:hover { -fx-background-color: derive(-accent-color, 15%); }
 .prompt-send-btn:disabled { -fx-background-color: derive(-app-text, -50%); -fx-text-fill: derive(-c-on-accent, -40%); }
@@ -767,7 +768,7 @@
 .search-context-btn { -fx-padding: 8 16 8 16; }
 .search-context-btn:hover { -fx-border-color: -app-success; }
 .download-spinner { -fx-progress-color: -accent-color; -fx-max-size: 14; -fx-min-size: 14; -fx-pref-size: 14; }
-.task-badge-box { -fx-border-radius: 10; -fx-background-radius: 10; -fx-padding: 2 8 2 6; -fx-alignment: center-left; -fx-cursor: hand; }
+.task-badge-box { -fx-border-radius: 10; -fx-background-radius: 10; -fx-padding: 2 8 2 6; -fx-alignment: center-left; -fx-cursor: hand; -fx-min-width: 350px;}
 .link-button { -fx-padding: 4 8 4 0; -fx-underline: false; }
 .link-button:hover { -fx-underline: true; }
 .tab-close { -fx-padding: 0 4 0 4; }
@@ -779,7 +780,7 @@
 .robot-indicator { -fx-pref-width: 34px; -fx-pref-height: 34px; }
 .chip { -fx-border-radius: 3; -fx-background-radius: 3; -fx-padding: 1 6 1 6; }
 /* Locked workflow ${variable} chip in the template editor — non-editable,
-   accent-tinted so it reads as a fixed token distinct from editable prose. */
+   accent-tinted so it reads as a fixed token distinct from editable prose. */Ï
 .workflow-var-chip {
     -fx-text-fill: -accent-color;
     -fx-background-color: derive(-accent-color, -70%);

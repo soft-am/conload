@@ -110,11 +110,11 @@ public final class ProjectTerminalFactory {
         });
         terminal.setOnExportStarted(label -> {
             ProjectFilesPane pane = projectFilesPanes.get(projectId);
-            if (pane != null) pane.showTaskBadge(label);
+            if (pane != null) pane.showTaskBadge("session-export", label);
         });
         terminal.setOnExportFinished(() -> {
             ProjectFilesPane pane = projectFilesPanes.get(projectId);
-            if (pane != null) pane.hideTaskBadge();
+            if (pane != null) pane.hideTaskBadge("session-export");
         });
         terminal.busyProperty().addListener((obs, old, busy) -> refreshProjectTabStates.run());
         terminal.sessionProperty().addListener((obs, old, value) -> refreshProjectTabStates.run());

@@ -220,7 +220,7 @@ public final class WorkflowInlineSection extends VBox {
         gatheringCancelled = false;
         gatherErrors.clear();
         progressLabel.getStyleClass().remove("workflow-progress-warning");
-        host.showTaskBadge("Gathering…", true, host.contextsDir().toFile());
+        host.showTaskBadge("workflow", "Gathering…", true, host.contextsDir().toFile());
 
         WorkflowEnvironment env = new WorkflowEnvironment(
                 host.config(), host.githubToken(), host.githubApiUrl(), host.workspacePath(),
@@ -281,17 +281,17 @@ public final class WorkflowInlineSection extends VBox {
             progressLabel.getStyleClass().add("workflow-progress-warning");
             progressLabel.setText(Icons.WARNING + " Gathered: " + summary
                     + " — " + errorCount + " error(s) occurred; see log below.");
-            host.hideTaskBadge();
+            host.hideTaskBadge("workflow");
             // Keep the section + log visible so the user can read the errors.
         } else if (totalFiles == 0) {
             progressLabel.getStyleClass().add("workflow-progress-warning");
             progressLabel.setText(Icons.WARNING + " Gathered 0 files — nothing was downloaded; "
                     + "check inputs/credentials and the log below.");
-            host.hideTaskBadge();
+            host.hideTaskBadge("workflow");
             // Nothing useful was gathered; keep the section open.
         } else {
             progressLabel.setText(Icons.CHECK + " Gathered: " + summary + " — prompt loaded below.");
-            host.showTaskBadge(Icons.CHECK + " Cross-context ready", false);
+            host.showTaskBadge("workflow", Icons.CHECK + " Cross-context ready", false, null);
             UiFactory.hide(this);
         }
     }
@@ -360,7 +360,7 @@ public final class WorkflowInlineSection extends VBox {
         cancelBtn.setDisable(true);
         UiFactory.hide(cancelBtn);
         gatherBtn.setDisable(false);
-        host.hideTaskBadge();
+        host.hideTaskBadge("workflow");
         progressLabel.setText("✗ Failed: " + t.getMessage());
         logArea.appendText("\nERROR: " + t.getMessage() + "\n");
         for (StackTraceElement e : t.getStackTrace()) {

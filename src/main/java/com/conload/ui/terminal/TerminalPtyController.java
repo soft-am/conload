@@ -27,6 +27,7 @@ final class TerminalPtyController {
     private volatile PtyProcess process;
     private final Object outputLock = new Object();
     private final ByteArrayOutputStream pendingOutput = new ByteArrayOutputStream();
+    private final Object inputLock = new Object();
     private boolean outputFlushScheduled;
 
     TerminalPtyController(Listener listener) {
@@ -55,14 +56,32 @@ final class TerminalPtyController {
     }
 
     void sendInput(String data) {
+        sendInput(data, null);
+    }
+
+    void sendInput(String data, Runnable onComplete) {
         PtyProcess p = process;
-        if (p == null || !p.isAlive()) return;
+        if (p == null || !p.isAlive()) {
+            if (onComplete != null) Platform.runLater(onComplete);
+            return;
+        }
         listener.onInput(data);
-        try {
-            p.getOutputStream().write(data.getBytes(StandardCharsets.UTF_8));
-            p.getOutputStream().flush();
-        } catch (IOException e) {
-            e.printStackTrace();
+        byte[] bytes = data.getBytes(StandardCharsets.UTF_8);
+        Thread.startVirtualThread(() -> {
+            writeInput(p, bytes);
+            if (onComplete != null) Platform.runLater(onComplete);
+        });
+    }
+
+    private void writeInput(PtyProcess p, byte[] bytes) {
+        synchronized (inputLock) {
+            if (!p.isAlive()) return;
+            try {
+                p.getOutputStream().write(bytes);
+                p.getOutputStream().flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 

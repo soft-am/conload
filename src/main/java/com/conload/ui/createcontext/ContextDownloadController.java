@@ -146,7 +146,7 @@ public final class ContextDownloadController {
         task.setOnFailed(e -> failure(task, project));
         task.setOnCancelled(e -> cancelled(project));
         host.closeSearchPopup();
-        if (project != null) project.pane().showTaskBadge("Adding context…", true,
+        if (project != null) project.pane().showTaskBadge("download", "Adding context… > ", true,
                 new File(folder, com.conload.util.FileUtil.normalizeContextFolderName(name)));
         new Thread(task).start();
     }
@@ -185,11 +185,11 @@ public final class ContextDownloadController {
         };
         host.setCurrentTask(task);
         host.bindDownload(task);
-        task.setOnSucceeded(e -> success(task, projectId, project, restorePrompt, "Cross-context ready"));
+        task.setOnSucceeded(e -> success(task, projectId, project, restorePrompt, "Cross-context ready >"));
         task.setOnFailed(e -> failure(task, project));
         task.setOnCancelled(e -> cancelled(project));
         host.closeSearchPopup();
-        if (project != null) project.pane().showTaskBadge("Gathering cross-context…", true,
+        if (project != null) project.pane().showTaskBadge("download", "Gathering cross-context… >", true,
                 host.contextsDir().toFile());
         Thread.ofVirtual().name("cross-context", 0).start(task);
     }
@@ -240,7 +240,7 @@ public final class ContextDownloadController {
     }
 
     private void success(Task<String> task, String projectId, ProjectFiles project, boolean restorePrompt, String completionText) {
-        if (project != null) project.pane().showTaskBadge(Icons.CHECK + " " + completionText, false);
+        if (project != null) project.pane().showTaskBadge("download", Icons.CHECK + " " + completionText, false, null);
         host.setLastSessionPath(task.getValue());
         host.setDownloadState(false);
         host.setStatus(Icons.CHECK + " " + completionText, "success");
@@ -261,7 +261,7 @@ public final class ContextDownloadController {
         else showCompletion(Icons.CHECK, completionText, path == null ? null : "New context folder: " + path, "success");
     }
     private void failure(Task<String> task, ProjectFiles project) {
-        if (project != null) project.pane().showTaskBadge("✗ Download failed", false);
+        if (project != null) project.pane().showTaskBadge("download", "✗ Download failed", false, null);
         Throwable error = task.getException();
         String detail = error != null && error.getMessage() != null ? error.getMessage() : "Unknown error";
         host.setDownloadState(false); host.setStatus("✗ Download failed: " + detail, "error"); host.appendLog("[ERROR] " + detail);
@@ -269,7 +269,7 @@ public final class ContextDownloadController {
         showCompletion("✗", "Download failed", detail, "error");
     }
     private void cancelled(ProjectFiles project) {
-        if (project != null) project.pane().showTaskBadge(Icons.STOP + " Download cancelled", false);
+        if (project != null) project.pane().showTaskBadge("download", Icons.STOP + " Download cancelled", false, null);
         host.setDownloadState(false); host.setStatus(Icons.STOP + " Download cancelled.", "warning");
         showCompletion(Icons.STOP, "Download cancelled", "The download was stopped by the user.", "warning");
     }

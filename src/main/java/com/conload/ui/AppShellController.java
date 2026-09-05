@@ -333,6 +333,9 @@ public class AppShellController extends ProjectWorkspaceController {
         Button prompts = UiFactory.actionButton("Prompts library");
         prompts.setOnAction(e -> switchToPrompts());
 
+        Button context = UiFactory.actionButton("Context");
+        context.setOnAction(e -> openContextManagementView());
+
         Button help = UiFactory.actionButton("Help");
         help.setOnAction(e -> switchToHelp());
 
@@ -355,7 +358,7 @@ public class AppShellController extends ProjectWorkspaceController {
         Region spacer = UiFactory.hSpacer();
 
         // Logo first, directly left of the title, both vertically centered.
-        HBox bar = new HBox(10, focusToggleBtn, title, spacer, settings, projects, prompts, help);
+        HBox bar = new HBox(10, focusToggleBtn, title, spacer, settings, projects, prompts, context, help);
         bar.setAlignment(Pos.CENTER_LEFT);
         bar.setPadding(new Insets(8, 12, 8, 12));
         bar.getStyleClass().add("panel-border-bottom");
@@ -471,10 +474,20 @@ public class AppShellController extends ProjectWorkspaceController {
                 com.conload.ui.projects.ProjectFilesPane pane = projectFilesPanes.get(activeProjectId);
                 if (pane != null) pane.showTaskBadge(label, spin, outputDirectory);
             }
+            @Override public void showTaskBadge(String key, String label, boolean spin, java.io.File outputDirectory) {
+                if (activeProjectId == null) return;
+                com.conload.ui.projects.ProjectFilesPane pane = projectFilesPanes.get(activeProjectId);
+                if (pane != null) pane.showTaskBadge(key, label, spin, outputDirectory);
+            }
             @Override public void hideTaskBadge() {
                 if (activeProjectId == null) return;
                 com.conload.ui.projects.ProjectFilesPane pane = projectFilesPanes.get(activeProjectId);
                 if (pane != null) pane.hideTaskBadge();
+            }
+            @Override public void hideTaskBadge(String key) {
+                if (activeProjectId == null) return;
+                com.conload.ui.projects.ProjectFilesPane pane = projectFilesPanes.get(activeProjectId);
+                if (pane != null) pane.hideTaskBadge(key);
             }
         };
     }

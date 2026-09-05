@@ -240,6 +240,14 @@ public class CopilotTerminalPane extends VBox {
         if (ptyController.isAlive()) ptyController.sendInput(data);
     }
 
+    public void sendInput(String data, Runnable onComplete) {
+        if (ptyController.isAlive()) {
+            ptyController.sendInput(data, onComplete);
+        } else if (onComplete != null) {
+            Platform.runLater(onComplete);
+        }
+    }
+
     public void resizePty(int cols, int rows) {
         ptyController.resize(cols, rows);
     }

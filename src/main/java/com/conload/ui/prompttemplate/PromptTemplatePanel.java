@@ -41,7 +41,7 @@ public class PromptTemplatePanel extends VBox {
     private static final Pattern VAR = Pattern.compile("\\$\\{(\\w+)}");
 
     // ── Fields ────────────────────────────────────────────────────────────────
-    private final Consumer<String> terminalSender;
+    private final TerminalSender terminalSender;
     private final Runnable onQuickActionsUpdated;
     private final QuickActionService quickActionService = new QuickActionService();
 
@@ -57,6 +57,7 @@ public class PromptTemplatePanel extends VBox {
     private HBox rightCluster;
     private SpeechMicButton micButton;
     private Button sendBtn;
+    private boolean sending;
     private Button expandPromptBtn;
     private Button copyPromptBtn;
 
@@ -178,7 +179,7 @@ public class PromptTemplatePanel extends VBox {
      *  Used by {@link CopilotTerminalPane}'s standalone (terminalOnlyMode=false)
      *  path; in the workspace the 5-arg constructor is used instead. */
     public PromptTemplatePanel(Consumer<String> terminalSender, Runnable onQuickActionsUpdated) {
-        this(terminalSender, onQuickActionsUpdated, null, null);
+        this((data, ignored) -> terminalSender.accept(data), onQuickActionsUpdated, null, null);
     }
 
     /** Full constructor — builds the new prompt-header row with the right-side
@@ -186,7 +187,7 @@ public class PromptTemplatePanel extends VBox {
      *  @param speechService           shared speech-to-text service (may be null → no mic)
      *  @param activeTerminalSupplier  supplies the currently-active terminal pane
      *                                 for delegating Export/Sessions actions (may be null) */
-    public PromptTemplatePanel(Consumer<String> terminalSender,
+    public PromptTemplatePanel(TerminalSender terminalSender,
                                Runnable onQuickActionsUpdated,
                                SpeechRecognitionService speechService,
                                Supplier<CopilotTerminalPane> activeTerminalSupplier) {
@@ -295,7 +296,7 @@ public class PromptTemplatePanel extends VBox {
         HBox.setHgrow(rightCluster, Priority.NEVER);
 
         if (speechService != null) {
-            micButton = new SpeechMicButton(null, terminalSender);
+            micButton = new SpeechMicButton(null, data -> terminalSender.send(data, null));
             micButton.setSpeechService(speechService);
             // Once this panel is in a scene, propagate the owner window so the
             // recording popup centers over it.
@@ -336,7 +337,7 @@ public class PromptTemplatePanel extends VBox {
         // Send + Copy buttons enabled only when there is text.
         promptTextArea.textProperty().addListener((obs, o, n) -> {
             boolean empty = n == null || n.trim().isEmpty();
-            sendBtn.setDisable(empty);
+            sendBtn.setDisable(sending || empty);
             if (copyPromptBtn != null) copyPromptBtn.setDisable(empty);
         });
 
@@ -606,7 +607,14 @@ public class PromptTemplatePanel extends VBox {
         String text = promptTextArea.getText().trim();
         if (text.isEmpty()) return;
         String escaped = text.replace("'", "'\\''");
-        terminalSender.accept("'" + escaped + "'\n");
+        sending = true;
+        sendBtn.setDisable(true);
+        sendBtn.setText("Sending...");
+        terminalSender.send("'" + escaped + "'\n", () -> {
+            sending = false;
+            sendBtn.setText("Send to terminal");
+            sendBtn.setDisable(promptTextArea.getText().trim().isEmpty());
+        });
     }
 
     private void copyPromptToClipboard() {

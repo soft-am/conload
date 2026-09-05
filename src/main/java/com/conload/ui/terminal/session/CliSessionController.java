@@ -71,6 +71,7 @@ public final class CliSessionController {
     public void reset() { awaiting = false; stopPolling(); }
 
     public void inspectInput(String data) {
+        if (!activeId.get().isBlank()) return;
         for (char c : data.toCharArray()) {
             if (c == '\r' || c == '\n') {
                 String line = input.toString().trim(); input.setLength(0);
@@ -78,7 +79,7 @@ public final class CliSessionController {
                     CliTypeDefinition def = findByCommand(line.split("\\s+")[0]);
                     if (def != null) begin(def);
                 }
-            } else if (c >= 0x20) input.append(c);
+            } else if (c >= 0x20 && input.length() < 1024) input.append(c);
         }
     }
     public void startPolling() {

@@ -354,10 +354,16 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
 
 
     protected void sendToActiveTerminal(String command) {
+        sendToActiveTerminal(command, null);
+    }
+
+    protected void sendToActiveTerminal(String command, Runnable onComplete) {
         CopilotTerminalPane terminal = (activeProjectId != null)
                 ? activeTerminal(activeWorkspaceKey(activeProjectId)) : null;
         if (terminal != null && command != null && !command.isBlank()) {
-            terminal.sendInput(command);
+            terminal.sendInput(command, onComplete);
+        } else if (onComplete != null) {
+            Platform.runLater(onComplete);
         }
     }
 
@@ -571,30 +577,46 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
         if (terminalSection != null) VBox.setVgrow(terminalSection, Priority.NEVER);
         if (terminalHost != null) VBox.setVgrow(terminalHost, Priority.NEVER);
 
+        mountContextManagementScreen(activeProjectId);
+        if (!isSearchRunning() && !searchResultsReady) Platform.runLater(this::openSearchDialog);
+    }
+
+    /** Opens the cached context-management screen without changing its state. */
+    protected void openContextManagementView() {
+        if (contentArea == null) return;
+        if (sharedPromptPanel != null) sharedPromptPanel.collapsePrompt();
+        showDashboard();
+        if (centerStack != null) VBox.setVgrow(centerStack, Priority.ALWAYS);
+        if (terminalSection != null) VBox.setVgrow(terminalSection, Priority.NEVER);
+        if (terminalHost != null) VBox.setVgrow(terminalHost, Priority.NEVER);
+        mountContextManagementScreen(activeProjectId);
+    }
+
+    private void mountContextManagementScreen(String projectId) {
         if (cachedDownloadPane == null) cachedDownloadPane = buildDownloadTab();
         Region downloadPane = cachedDownloadPane;
-
-        // Compact top panel: back navigation + "Context Management" title.
-        // Very small height (one line, tight vertical padding, bordered bottom).
-        Button backBtn = new Button(Icons.BACK + " Back to Prompt");
-        backBtn.getStyleClass().add("link-button");
-        String backColor = projectColors.getOrDefault(activeProjectId, ProjectColors.DEFAULT);
-        backBtn.setStyle("-fx-text-fill: " + backColor + ";");
-        backBtn.setOnAction(e -> restorePromptWorkspace());
-
-        Label contextTitle = new Label("Context Management");
-        contextTitle.getStyleClass().addAll("title", "small");
-
-        HBox headerPanel = new HBox(10, backBtn, contextTitle);
-        headerPanel.setAlignment(Pos.CENTER_LEFT);
-        headerPanel.setPadding(new Insets(4, 14, 4, 14));
-        headerPanel.getStyleClass().add("panel-border-bottom");
-
-        VBox wrapper = new VBox(0, headerPanel, downloadPane);
+        VBox wrapper = new VBox(0, buildContextManagementHeader(projectId), downloadPane);
         Theme.classes(wrapper, Theme.CL_BG_APP);
         VBox.setVgrow(downloadPane, Priority.ALWAYS);
         contentArea.getChildren().setAll(wrapper);
-        if (!isSearchRunning() && !searchResultsReady) Platform.runLater(this::openSearchDialog);
+    }
+
+    private StackPane buildContextManagementHeader(String projectId) {
+        Button backBtn = new Button(Icons.BACK + " Back to Prompt");
+        backBtn.getStyleClass().add("link-button");
+        String accent = projectColors.getOrDefault(projectId, ProjectColors.DEFAULT);
+        backBtn.setStyle("-fx-text-fill: " + accent + ";");
+        backBtn.setOnAction(e -> restorePromptWorkspace());
+
+        Label contextTitle = new Label("Context Management");
+        contextTitle.getStyleClass().add("context-header-title");
+        contextTitle.setStyle("-fx-text-fill: " + accent + ";");
+
+        StackPane header = new StackPane(backBtn, contextTitle);
+        StackPane.setAlignment(backBtn, Pos.CENTER_LEFT);
+        header.setPadding(new Insets(4, 14, 4, 14));
+        header.getStyleClass().add("panel-border-bottom");
+        return header;
     }
 
     /** Re-mounts the shared context screen for any search or download badge state. */
@@ -608,23 +630,7 @@ public abstract class ProjectWorkspaceController extends ContextAcquisitionContr
         if (centerStack != null) VBox.setVgrow(centerStack, Priority.ALWAYS);
         if (terminalSection != null) VBox.setVgrow(terminalSection, Priority.NEVER);
         if (terminalHost != null) VBox.setVgrow(terminalHost, Priority.NEVER);
-        if (contentArea != null && cachedDownloadPane != null) {
-            Button backBtn = new Button(Icons.BACK + " Back to Prompt");
-            backBtn.getStyleClass().add("link-button");
-            String backColor = projectColors.getOrDefault(projectId, ProjectColors.DEFAULT);
-            backBtn.setStyle("-fx-text-fill: " + backColor + ";");
-            backBtn.setOnAction(e -> restorePromptWorkspace());
-            Label contextTitle = new Label("Context Management");
-            contextTitle.getStyleClass().addAll("title", "small");
-            HBox headerPanel = new HBox(10, backBtn, contextTitle);
-            headerPanel.setAlignment(Pos.CENTER_LEFT);
-            headerPanel.setPadding(new Insets(4, 14, 4, 14));
-            headerPanel.getStyleClass().add("panel-border-bottom");
-            VBox wrapper = new VBox(0, headerPanel, cachedDownloadPane);
-            Theme.classes(wrapper, Theme.CL_BG_APP);
-            VBox.setVgrow(cachedDownloadPane, Priority.ALWAYS);
-            contentArea.getChildren().setAll(wrapper);
-        }
+        if (contentArea != null) mountContextManagementScreen(projectId);
     }
 
 

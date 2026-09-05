@@ -83,6 +83,7 @@ public abstract class ContextAcquisitionController extends ManagementScreensCont
     private BorderPane mainShell;
     private VBox downloadInProgressView;
     private VBox downloadCompleteView;
+    private VBox noResultsView;
     private SearchCriteriaPane searchCriteriaPane;
     private DownloadProgressPane downloadProgressPane;
     private ContextDownloadController downloadController;
@@ -101,8 +102,10 @@ public abstract class ContextAcquisitionController extends ManagementScreensCont
         VBox resultsBox = buildResultsContainer();
         VBox.setMargin(resultsBox, new Insets(8, 0, 0, 0));
         ScrollPane resultsScroll = UiFactory.scrollable(resultsBox);
+        resultsScroll.setMinHeight(400);
         VBox.setVgrow(resultsScroll, Priority.ALWAYS);
         mainResultsScroll = resultsScroll;
+        noResultsView = buildNoResultsView();
 
         downloadController = new ContextDownloadController(new DownloadHost());
         downloadProgressPane = downloadController.buildProgressPane();
@@ -129,11 +132,20 @@ public abstract class ContextAcquisitionController extends ManagementScreensCont
         return shell;
     }
 
+    private VBox buildNoResultsView() {
+        Label label = new Label("No results found");
+        label.getStyleClass().addAll("placeholder", "context-no-results");
+        VBox view = new VBox(label);
+        view.setAlignment(Pos.CENTER);
+        view.setMinHeight(400);
+        return view;
+    }
+
     private VBox buildSearchLauncher() {
         SvgIcon jiraIcon = new SvgIcon("/images/jira-logo.svg", 20, "-app-panel");
         SvgIcon confluenceIcon = new SvgIcon("/images/confluence-logo.svg", 20, "-app-panel");
         SvgIcon githubIcon = new SvgIcon("/images/github-logo.svg", 20, "-app-panel");
-        Label label = new Label("Download Context");
+        Label label = new Label("Search Context");
         label.getStyleClass().add("search-context-title");
         HBox content = new HBox(10, jiraIcon, confluenceIcon, githubIcon, label);
         content.setAlignment(Pos.CENTER);
@@ -208,6 +220,7 @@ public abstract class ContextAcquisitionController extends ManagementScreensCont
                     displayResultsSummary(results);
                     if (!hasVisibleResults())
                         setUniStatus(Icons.WARNING + "  No results found — adjust criteria and retry", "warning");
+                    applyResultsCenterView();
                     updateSaveButtonState();
                 }
                 @Override public void failed(Throwable error) { }
@@ -250,13 +263,13 @@ public abstract class ContextAcquisitionController extends ManagementScreensCont
             showSearchCriteriaInfo();
             ProjectFilesPane badgePane = searchProjectId == null ? null
                     : projectFilesPanes.get(searchProjectId);
-            if (badgePane != null) badgePane.showTaskBadge("Searching…", true);
+            if (badgePane != null) badgePane.showTaskBadge("search", "Searching…", true, null);
         } else {
             downloadProgressPane.setSearching(false);
             if (searchContextBtn != null) UiFactory.show(searchContextBtn);
             ProjectFilesPane badgePane = searchProjectId == null ? null
                     : projectFilesPanes.get(searchProjectId);
-            if (badgePane != null) badgePane.hideTaskBadge();
+            if (badgePane != null) badgePane.hideTaskBadge("search");
         }
     }
 
@@ -288,7 +301,14 @@ public abstract class ContextAcquisitionController extends ManagementScreensCont
         searchResultsReady = true;
         ProjectFilesPane badgePane = searchProjectId == null ? null
                 : projectFilesPanes.get(searchProjectId);
-        if (badgePane != null) badgePane.showTaskBadge(Icons.CHECK + " Search results ready", false);
+        if (badgePane != null) badgePane.showTaskBadge("search", Icons.CHECK + " Search results ready", false, null);
+    }
+
+    /** Mounts the results area or the empty-state view, based on populated panels.
+     *  Must run after {@code populateSearchResults} so panel visibility is current. */
+    private void applyResultsCenterView() {
+        if (mainShell == null || mainResultsScroll == null) return;
+        mainShell.setCenter(hasVisibleResults() ? mainResultsScroll : noResultsView);
     }
 
     /** Hides the search popup (if open). The popup is criteria-entry-only; it
