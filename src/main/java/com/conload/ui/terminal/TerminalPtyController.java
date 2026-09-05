@@ -6,6 +6,7 @@ import com.pty4j.WinSize;
 import javafx.application.Platform;
 
 import java.io.File;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -24,6 +25,9 @@ final class TerminalPtyController {
 
     private final Listener listener;
     private volatile PtyProcess process;
+    private final Object outputLock = new Object();
+    private final ByteArrayOutputStream pendingOutput = new ByteArrayOutputStream();
+    private boolean outputFlushScheduled;
 
     TerminalPtyController(Listener listener) {
         this.listener = listener;
@@ -108,13 +112,45 @@ final class TerminalPtyController {
         try (InputStream in = p.getInputStream()) {
             int count;
             while ((count = in.read(buffer)) != -1) {
-                String output = Base64.getEncoder().encodeToString(java.util.Arrays.copyOf(buffer, count));
-                Platform.runLater(() -> listener.onOutput(output));
+                queueOutput(buffer, count);
             }
+            flushOutput();
             System.out.println("[TERMINAL] PTY reader — stream ended (EOF)");
         } catch (IOException e) {
             System.err.println("[TERMINAL] PTY reader IOException: " + e.getMessage());
         }
         Platform.runLater(listener::onEnded);
+    }
+
+    /** Coalesce rapid PTY reads so the WebView is not updated once per read. */
+    private void queueOutput(byte[] bytes, int length) {
+        synchronized (outputLock) {
+            pendingOutput.write(bytes, 0, length);
+            if (outputFlushScheduled) return;
+            outputFlushScheduled = true;
+        }
+        Thread.startVirtualThread(() -> {
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            flushOutput();
+        });
+    }
+
+    private void flushOutput() {
+        byte[] bytes;
+        synchronized (outputLock) {
+            if (pendingOutput.size() == 0) {
+                outputFlushScheduled = false;
+                return;
+            }
+            bytes = pendingOutput.toByteArray();
+            pendingOutput.reset();
+            outputFlushScheduled = false;
+        }
+        String output = Base64.getEncoder().encodeToString(bytes);
+        Platform.runLater(() -> listener.onOutput(output));
     }
 }
