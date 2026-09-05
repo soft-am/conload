@@ -1,10 +1,12 @@
 # Builds native installers (.dmg / .exe / .deb / .rpm) AND per-OS
 # distribution JARs on 3 OS runners, then publishes them all as GitHub
-# Release assets whenever a v* tag is pushed.
+# Release assets whenever a v* tag is pushed. Finally, the update-formula
+# job regenerates Formula/conload.rb (Homebrew install) with the new
+# version + JAR sha256 checksums and commits it to the default branch.
 #
 # Usage:
-#   git tag v1.0.0
-#   git push origin v1.0.0
+#   git tag v1.0.1
+#   git push origin v1.0.1
 #
 # Artifacts are renamed to stable, version-less filenames so the README can
 # link releases/latest/download/conload.dmg etc. without breaking on bumps.
@@ -44,7 +46,7 @@ jobs:
       - name: Build distribution JAR
         run: |
           mvn -DskipTests package -Pmac -q
-          mv target/conload-1.0.0-mac.jar target/conload-mac.jar
+          mv target/conload-1.0.1-mac.jar target/conload-mac.jar
       - uses: actions/upload-artifact@v4
         with:
           name: conload-mac-dmg
@@ -75,10 +77,10 @@ jobs:
           mvn clean package -Pnative -DskipTests -q
           jpackage \
             --input target/libs \
-            --main-jar conload-1.0.0.jar \
+            --main-jar conload-1.0.1.jar \
             --main-class com.conload.App \
             --name conload \
-            --app-version 1.0.0 \
+            --app-version 1.0.1 \
             --description "Download Confluence and Jira pages as Markdown for AI/Copilot context" \
             --vendor "conload" \
             --dest target/installer \
@@ -97,7 +99,7 @@ jobs:
         shell: bash
         run: |
           mvn -DskipTests package -Pwindows -q
-          mv target/conload-1.0.0-windows.jar target/conload-windows.jar
+          mv target/conload-1.0.1-windows.jar target/conload-windows.jar
       - uses: actions/upload-artifact@v4
         with:
           name: conload-windows-exe
@@ -134,7 +136,7 @@ jobs:
       - name: Build distribution JAR
         run: |
           mvn -DskipTests package -Plinux -q
-          mv target/conload-1.0.0-linux.jar target/conload-linux.jar
+          mv target/conload-1.0.1-linux.jar target/conload-linux.jar
       - uses: actions/upload-artifact@v4
         with:
           name: conload-linux-deb
@@ -160,11 +162,55 @@ jobs:
         with:
           path: assets
           merge-multiple: true
-      # Attaches all version-less assets (installers + JARs) to a GitHub
-      # Release. The JARs let users run conload with java -jar without
-      # building from source or dealing with unsigned installer warnings.
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
           files: assets/*
+
+  # Regenerates Formula/conload.rb (the Homebrew install formula) from
+  # Formula/conload.rb.template with the just-released version and the
+  # sha256 checksums of the published conload-mac.jar / conload-linux.jar,
+  # then commits it to the default branch. Users install via:
+  #   brew install https://raw.githubusercontent.com/soft-am/conload/<branch>/Formula/conload.rb
+  update-formula:
+    name: Update Homebrew formula
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+      - name: Download JARs from the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          mkdir -p /tmp/jars
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" \
+            -p "conload-mac.jar" -p "conload-linux.jar" -D /tmp/jars
+      - name: Compute sha256 checksums
+        run: |
+          echo "MAC_SHA=$(sha256sum /tmp/jars/conload-mac.jar | cut -d' ' -f1)" >> "$GITHUB_ENV"
+          echo "LINUX_SHA=$(sha256sum /tmp/jars/conload-linux.jar | cut -d' ' -f1)" >> "$GITHUB_ENV"
+      - name: Regenerate Formula/conload.rb
+        run: |
+          sed -e "s/__VERSION__/${VERSION}/g" \
+              -e "s/__MAC_SHA__/${MAC_SHA}/g" \
+              -e "s/__LINUX_SHA__/${LINUX_SHA}/g" \
+              Formula/conload.rb.template > Formula/conload.rb
+          cat Formula/conload.rb
+      - name: Commit and push formula
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/conload.rb
+          if git diff --cached --quiet; then
+            echo "Formula unchanged — nothing to commit."
+            exit 0
+          fi
+          git commit -m "chore(formula): bump Homebrew formula to v${VERSION}"
+          git push

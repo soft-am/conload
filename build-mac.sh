@@ -27,10 +27,10 @@ fi
 echo "[2/3] Creating macOS .dmg installer..."
 jpackage \
   --input target/libs \
-  --main-jar conload-1.0.0.jar \
+  --main-jar conload-1.0.1.jar \
   --main-class com.conload.App \
   --name conload \
-  --app-version 1.0.0 \
+  --app-version 1.0.1 \
   --description "Download Confluence and Jira pages as Markdown for AI/Copilot context" \
   --vendor "conload" \
   --dest target/installer \
@@ -41,5 +41,5 @@ jpackage \
   $ICON_ARG
 echo ""
 echo "[3/3] Done!"
-echo "Installer: target/installer/conload-1.0.0.dmg"
+echo "Installer: target/installer/conload-1.0.1.dmg"
 echo ""

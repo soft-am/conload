@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.conload</groupId>
     <artifactId>conload</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <packaging>jar</packaging>
     <name>Copilot Context Loader</name>
     <description>A local context workspace for CLI-based AI agents. Download Confluence, Jira, and GitHub content as Markdown and run any CLI agent in an embedded terminal.</description>
@@ -38,7 +38,7 @@
         <javafx.version>21.0.2</javafx.version>
         <jackson.version>2.17.0</jackson.version>
         <app.name>conload</app.name>
-        <app.version>1.0.0</app.version>
+        <app.version>1.0.1</app.version>
         <!-- JavaFX native-lib classifier. Empty = auto-detect host OS (dev builds).
              Per-OS profiles (-Pmac / -Plinux / -Pwindows) set this to pin a single platform. -->
         <javafx.classifier></javafx.classifier>
@@ -291,10 +291,10 @@
         <!-- ================================================================
              Per-OS fat JAR profiles — produce a platform-specific JAR whose
              bundled JavaFX native libs match the target OS.
-             Run with:  mvn -DskipTests package -Pmac      → conload-1.0.0-mac.jar
-                        mvn -DskipTests package -Plinux    → conload-1.0.0-linux.jar
-                        mvn -DskipTests package -Pwindows  → conload-1.0.0-windows.jar
-             Each JAR runs with:  java -jar conload-1.0.0-<platform>.jar
+              Run with:  mvn -DskipTests package -Pmac      → conload-1.0.1-mac.jar
+                         mvn -DskipTests package -Plinux    → conload-1.0.1-linux.jar
+                         mvn -DskipTests package -Pwindows  → conload-1.0.1-windows.jar
+              Each JAR runs with:  java -jar conload-1.0.1-<platform>.jar
              on any plain JDK 21+ (no JavaFX required on the target machine).
              Build all three on any OS (classifier forces the right natives).
              ================================================================ -->

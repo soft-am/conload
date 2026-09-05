@@ -22,15 +22,15 @@ Run Configuration JRE must also be 21.
 No test suite. The build is the typecheck + verification step:
 
 ```bash
-mvn -DskipTests package        # ~12s; produces target/conload-1.0.0.jar (host-OS natives)
+mvn -DskipTests package        # ~12s; produces target/conload-1.0.1.jar (host-OS natives)
 mvn javafx:run                  # run the app interactively
 ```
 
 Per-OS distribution JARs (cross-platform, include correct JavaFX natives):
 ```bash
-mvn -DskipTests package -Pmac       # → target/conload-1.0.0-mac.jar
-mvn -DskipTests package -Plinux      # → target/conload-1.0.0-linux.jar
-mvn -DskipTests package -Pwindows    # → target/conload-1.0.0-windows.jar
+mvn -DskipTests package -Pmac       # → target/conload-1.0.1-mac.jar
+mvn -DskipTests package -Plinux      # → target/conload-1.0.1-linux.jar
+mvn -DskipTests package -Pwindows    # → target/conload-1.0.1-windows.jar
 ```
 
 Native installers (.dmg / .exe / .deb / .rpm) are built by
@@ -39,10 +39,17 @@ Native installers (.dmg / .exe / .deb / .rpm) are built by
 `--add-modules` works). The `-Pnative` Maven profile only preps `target/libs/`;
 `jpackage` itself is invoked by the build scripts (`build-mac.sh`,
 `build-linux.sh`, `build-windows.bat`) which CI calls. To publish a release:
-`git tag v1.0.0 && git push origin v1.0.0`. Assets are renamed to stable
+`git tag v1.0.1 && git push origin v1.0.1`. Assets are renamed to stable
 version-less names (`conload.dmg` etc.) so README download links survive
 version bumps. Release assets are hosted on the public `soft-am/conload`
 GitHub repo and attached to each tag's Release by the CI workflow.
+
+The same workflow's `update-formula` job regenerates `Formula/conload.rb`
+(Homebrew install for macOS + Linuxbrew) from `Formula/conload.rb.template`
+with the new version and JAR sha256 checksums, then commits it to `master`.
+Users install with:
+`brew install https://raw.githubusercontent.com/soft-am/conload/master/Formula/conload.rb`
+(installable once the repo is public).
 
 Run `mvn -DskipTests package` after every change. BUILD SUCCESS = green.
 

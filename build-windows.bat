@@ -43,10 +43,10 @@ if exist "package\windows\icon.ico" (
 echo [2/3] Creating Windows installer...
 jpackage ^
   --input target\libs ^
-  --main-jar conload-1.0.0.jar ^
+  --main-jar conload-1.0.1.jar ^
   --main-class com.conload.App ^
   --name conload ^
-  --app-version 1.0.0 ^
+  --app-version 1.0.1 ^
   --description "Download Confluence and Jira pages as Markdown for AI/Copilot context" ^
   --vendor "conload" ^
   --dest target\installer ^
@@ -66,6 +66,6 @@ if errorlevel 1 (
 
 echo.
 echo [3/3] Done!
-echo Installer: target\installer\conload-1.0.0.exe
+echo Installer: target\installer\conload-1.0.1.exe
 echo.
 
