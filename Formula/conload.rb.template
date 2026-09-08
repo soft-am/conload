@@ -1,11 +1,11 @@
 # Template for the Homebrew formula in soft-am/homebrew-tap.
 #
 # The workflow in .github/workflows/update-formula.yml (triggered on
-# release-published or manual run) substitutes the __VERSION__ / __MAC_SHA__
-# / __LINUX_SHA__ tokens and pushes the result as Formula/conload.rb to the
-# public soft-am/homebrew-tap repository (via the HOMEBREW_TAP_TOKEN secret).
-# The generated formula does NOT live in this repo — the tap repo is the
-# single source of truth. Users install with:
+# release-published or manual run) substitutes the version and sha256
+# placeholder tokens below and pushes the result as Formula/conload.rb to
+# the public soft-am/homebrew-tap repository (via the HOMEBREW_TAP_TOKEN
+# secret). The generated formula does NOT live in this repo — the tap repo
+# is the single source of truth. Users install with:
 #   brew install soft-am/tap/conload
 class Conload < Formula
   desc "Context layer for CLI coding agents — Confluence/Jira/GitHub as Markdown"
