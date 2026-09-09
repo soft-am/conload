@@ -12,6 +12,7 @@ user-facing overview, features, and installation see the [README](../README.md).
 - [Project Structure](#project-structure) — package map
 - [Runtime State Files](#runtime-state-files) — what conload writes under `~/.conload/`
 - [Bundled Templates & Resources (read-only)](#bundled-templates--resources-read-only)
+- [Feature reference](#feature-reference) — detailed per-feature documentation and developer value
 
 ---
 
@@ -404,3 +405,224 @@ These ship inside the JAR / source tree and are **not** runtime state — they a
 | `src/main/resources/styles/theme.css`   | Application stylesheet.                                                                                                                                                                                                                                        |
 | `src/main/resources/terminal/`          | xterm.js terminal HTML, JS, and focus-mode assets.                                                                                                                                                                                                             |
 | `src/main/resources/images/`            | SVG icons (robot indicators, workflow sparkle, app icon).                                                                                                                                                                                                      |
+
+---
+
+## Feature reference
+
+Detailed per-feature documentation with developer value. This is the long-form companion to the
+[README feature list](../README.md#features).
+
+### Multi-terminal for any Agentic CLI
+
+Every project gets its own embedded terminal — a real **xterm.js + Pty4J** terminal (the same engine VS Code uses), not
+a process pipe. You can run *any* CLI-based agent in it:
+
+- `opencode`, GitHub Copilot, `aider`, `claude-code`, `gemini-cli`, `ollama`, or any future tool.
+
+CLI definitions are **user-configurable** in the Config tab. For each agent you can set a detection string, a
+session-listing command, a resume command, and an export command — with `{id}` placeholders substituted at runtime. Out
+of the box, OpenCode is fully wired (list / resume / export sessions); GitHub Copilot is detected and labelled. Adding a
+new agent takes seconds and requires no code changes.
+
+**Developer value:** Stop juggling terminal windows. Each project has its own terminal with its own working directory,
+its own agent session, and its own identity color — so you always know which context you're in.
+
+### Terminal tabs & session persistence
+
+- **Per-project terminals** with tab persistence — sessions are restored on restart.
+- **Session browser** — list, resume, and switch CLI agent sessions (for agents that expose a JSON session list like
+  OpenCode).
+- **Terminal buffer export** to Markdown — capture the full agent conversation for documentation or handoff.
+- **Animated robot indicator** shows when the agent is busy, with per-project colors and selectable character (robot,
+  alien, cat, Yoda).
+- **Focus mode** — a native full-screen black overlay with an animated agent indicator, so you can let the agent work
+  undisturbed.
+
+**Developer value:** Close a tab, restart your machine, come back tomorrow — your agent sessions are still there,
+resumable with one click. Export the transcript when you need to document what the agent did.
+
+### Git worktrees integration
+
+`conload` is a first-class **`git worktree`** client. For any project that's a git repo, a sidebar lists all worktrees
+(primary + linked), and you can:
+
+- **Create** a new linked worktree from any remote branch (`git fetch --all --prune` runs first).
+- **Switch** between worktrees — each worktree gets its own terminal with its own working directory and its own
+  remembered CLI session.
+- **Remove** worktrees (with force option for dirty trees).
+
+Worktree sessions are durable: closing a worktree's tab remembers its last CLI session so you can resume later.
+
+**Developer value:** Work on three features in parallel without `git stash` chaos. Each worktree is a separate working
+directory with its own agent — the terminal opens in the right path, the file tree shows the right branch, and the agent
+only sees that branch's code.
+
+### Context loading: Confluence, Jira, GitHub
+
+Download enterprise knowledge as Markdown, organized into structured `context_<name>/` folders your agent can read.
+
+**Confluence**
+
+- REST API client (Basic Auth, paginated, retry with backoff).
+- Recursive page-tree download with hierarchy-based file naming.
+- Storage-format XHTML → Markdown (macros, tables, code blocks, task lists).
+- Diagram extraction: Mermaid, PlantUML, draw.io, Gliffy, BPMN.
+- CQL keyword search; attachment deduplication (PNG > JPG > SVG priority).
+
+**Jira**
+
+- REST API v3 (JQL search, batch fetch, attachments).
+- Atlassian Document Format (ADF) JSON → Markdown conversion.
+- Issue → Markdown with metadata tables, comments, linked issues, attachments.
+- URL parsing (`/browse/PROJ-123`, `?selectedIssue=`, bare keys).
+
+**GitHub**
+
+- Commit search by keyword within `owner/repo`.
+- PR fetch by URL + diff export as JSON.
+- Bearer token auth — works with github.com and GitHub Enterprise.
+
+**Developer value:** Your agent can't open a browser. But it *can* read `confluence_Authentication.md`,
+`jiraSEC-1234.md`, and `commits_SEC-1234.json` from a local folder. One click and the full ticket, its spec, and the
+code that implements it are on disk.
+
+### Unified multi-source search & download
+
+One dialog, six criterion types across three platforms. Search runs in **parallel** with per-criterion spinners and
+result-count badges. Results are collapsible panels with checkboxes, select-all/none bars. One click downloads
+everything into a structured folder with `confluence/`, `jira/`, and `github/` subdirectories. Progress logs, progress
+bar, and success/warning/error status keep you informed.
+
+**Developer value:** "I need the spec, the ticket, and the PR for this feature" — one search, one download, one folder.
+Your agent reads it all.
+
+### Built-in workflows
+
+Workflows are built-in recipes that use the Cross-Context Engine to gather context and generate a ready-to-send prompt.
+Each workflow:
+
+1. Takes a minimal input (a Jira key, a PR URL, a Confluence keyword).
+2. Runs `CrossContextBuilder.createCrossContext(...)` which executes
+   [all six phases](#cross-context-engine).
+3. Substitutes the results into a bundled prompt template (`${contextRoot}`, `${outputDocPath}`, `${workspacePath}`,
+   etc.).
+4. Pushes the finished prompt into the prompt textarea — review it and click Send.
+
+#### Selecting and running a workflow
+
+1. In the prompt header, pick a workflow from the **workflow dropdown**.
+2. A dynamic form appears (each workflow defines its own fields — text inputs + the Full Mode checkbox).
+3. Fill the fields and click **Gather Context** — the workflow runs on a background thread with live progress and log
+   output.
+4. When done, the prompt template is populated and pushed to the prompt textarea. The workflow section collapses.
+5. Review the prompt and click **Send** to push it to the terminal.
+
+#### Full Mode vs. Fast Mode
+
+Every workflow has a **Full Mode** toggle (checkbox, default on):
+
+|                                         | Full Mode (default)                                       | Fast Mode                                                                              |
+|-----------------------------------------|-----------------------------------------------------------|----------------------------------------------------------------------------------------|
+| Recursion depth                         | Unlimited — follows all related issues to any depth       | Capped at depth 1 (direct related issues only, no grandchildren)                       |
+| Epics                                   | Fully expanded — all child issues are recursively fetched | Summary only — the epic issue is fetched + exported, but its children are not expanded |
+| Related keys per issue                  | Unlimited                                                 | Capped at 10 per issue                                                                 |
+| Top-word Confluence discovery (Phase E) | Runs                                                      | Skipped entirely                                                                       |
+| Global dedup                            | Yes (all three sets active)                               | Yes (all three sets active)                                                            |
+| Use when                                | You want maximum context for a thorough analysis          | You need a quick first pass or a large epic with hundreds of children                  |
+
+#### Built-in workflow details
+
+**Prepare to Refinement** — Input: Jira issue keys, URLs, or keywords (comma/space separated). Plus optional GitHub
+`owner/repo` (auto-detected from the workspace git remote) and an optional additional Confluence URL or keyword.
+Gathers: the seed Jira issue(s) + all related issues (recursive) + linked Confluence page trees (with subpages and
+media) + GitHub commits mentioning each key (with diffs) + the parent epic (if any) expanded + top-word Confluence
+discovery (full mode). Output prompt instructs the agent to produce a refinement/implementation document with:
+Current Data Flow, Clarifications/Questions, Previous Related Jira Stories, Related Confluence Documentation, Draft
+Estimate.
+
+**Code Review** — Input: one or more GitHub PR URLs (space/comma/newline separated). Multiple PRs can be from different
+repos. Gathers: each PR's metadata + diff + commit messages. Jira keys and Confluence URLs are discovered from the PR
+title, body, and commit messages, then the recursive cross-context engine runs over all combined seeds. Output prompt
+instructs the agent to perform a structured code review: PR Summary, Related Jira & Confluence Context, Code Quality
+Assessment, Security & Performance, Test Coverage, Risks & Recommendations.
+
+**Confluence Reverse Engineering** — Input: a Confluence page URL or a search keyword. If a URL — the page tree below
+that page is downloaded, then Jira keys are discovered from the page content and the recursive engine takes over. If a
+keyword — a CQL search runs, the top 3 result pages serve as starting points (each tree downloaded before Jira-key
+discovery). Output prompt instructs the agent to reverse-engineer the documented architecture: System Overview,
+Documented Architecture, Data Model, Business Rules & Workflows, Related Jira Issues & Implementation History,
+Documentation vs. Code Gaps, Recommendations.
+
+#### Re-running a workflow from the file tree
+
+After a gather completes, the context folder contains `workflow-info.json` (workflowId, inputs, repo, output path,
+timestamp). **Right-click** that folder in the file tree → **Run Workflow** → the prompt is regenerated from the
+existing context files by substituting paths into the template — no API calls are made. This lets you refine the prompt
+without re-downloading everything.
+
+### Prompt library
+
+A full **prompt template CRUD** system built on the same engine as quick actions:
+
+- **Template selector** dropdown with create / edit / delete.
+- **`${variable}` substitution** — templates auto-detect placeholders and render input fields for them.
+- **Context picker mode** — click files in the file tree to insert their paths into `${var}` placeholders in the prompt.
+- **Live variable detection** — the editor highlights variables as you type.
+- Templates are marked separately from quick actions (larger text, multi-line editor) and are persisted to
+  `quick-actions.json`.
+
+**Developer value:** Stop typing the same long prompt every time. Write it once with placeholders, then fill in the Jira
+key / file paths / topic — and send it straight to the agent.
+
+### Quick actions
+
+A **quick actions bar** sits above the terminal with one-click parameterized commands:
+
+- Commands may contain `${varName}` placeholders — clicking the action pops up an input dialog to fill them.
+- "With-input" actions are grouped at the front, transparent-styled.
+- Full CRUD — add, edit, delete, reorder.
+- Persisted to `~/.conload/quick-actions.json`.
+
+**Developer value:** `git checkout ${branch}`, `opencode --session ${id}`, `npm run test:${suite}` — one click, fill the
+blank, done. Your most-used commands, always one tap away.
+
+### Offline speech-to-text (Vosk)
+
+- **Vosk-based voice dictation** — recognized text is sent directly to the terminal PTY.
+- **Speech model is bundled** (~40 MB, English + German) — no download, no internet needed.
+- Custom JNA binding works around a broken symbol in vosk 0.3.45.
+- Non-blocking: all native loading runs on background threads; the UI stays responsive.
+
+**Developer value:** Dictate your prompt or command instead of typing. Fully offline — safe for air-gapped and
+restricted-network environments.
+
+### Project workspaces
+
+- **Projects** persisted to `projects.json` with identity colors and context-folder lists.
+- Create from an existing folder, or from external data (downloads into a new project).
+- **Multi-tab project ribbon** with close buttons and busy-state robot indicators.
+- **Per-project file tree** (lazy-loading, accent-colored, mouse-wheel scroll).
+- Context CRUD: add local import, download, remove, reorder.
+- File tree operations: Open, "Open in…" (macOS app chooser), Copy Path, Put into Terminal.
+
+**Developer value:** Like browser tabs for your agents. Each project is a separate workspace — its own terminal, file
+tree, context folders, and color — so context never leaks between projects.
+
+### Configuration
+
+Open the in-app **Config** tab (gear icon) and set:
+
+| Field                      | Description                                                                                                                             |
+|----------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Atlassian base URL**     | Your Confluence/Jira host (e.g. `https://yourcompany.atlassian.net`). Shared by both.                                                   |
+| **Email**                  | Your Atlassian account email.                                                                                                           |
+| **API token**              | Atlassian API token ([create one](https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/)). |
+| **GitHub token**           | Personal access token with `repo` / `read:org` scope.                                                                                   |
+| **GitHub API URL**         | `https://api.github.com` (default) or your GitHub Enterprise host.                                                                      |
+| **Default export folder**  | Where context folders are downloaded by default.                                                                                        |
+| **Shell**                  | Terminal shell (e.g. `/bin/zsh`, `/bin/bash`). Blank = system default.                                                                  |
+| **CLI types**              | Editable list of CLI agent definitions — label, detection string, and list/resume/export commands with `{id}` placeholders.             |
+| **Full Confluence folder** | Global setting: a persistent Confluence data folder that workflows reference as `${confluenceDataSource}`.                              |
+
+Configuration is stored in `~/.conload/config.txt` — outside the repo, contains credentials.
