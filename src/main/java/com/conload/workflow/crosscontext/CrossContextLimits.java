@@ -30,6 +30,9 @@ public final class CrossContextLimits {
     /** Max commits fetched and written per Jira key. */
     public static final int MAX_COMMITS_PER_KEY = 15;
 
+    /** Max child issues (Epic children + sub-tasks) fetched per Jira key via JQL. */
+    public static final int MAX_CHILD_ISSUES = 20;
+
     /** Confluence reverse-engineering workflow: max page trees from a keyword search. */
     public static final int KEYWORD_TOP_RESULTS = 2;
 }

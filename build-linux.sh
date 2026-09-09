@@ -29,21 +29,26 @@ echo ""
 echo "[1/3] Building JAR and copying dependencies..."
 mvn clean package -Pnative -DskipTests -q
 
-# 2. Determine icon arg
+# 2. Derive version + jar name from pom.xml
+VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout 2>/dev/null)
+JAR_NAME="conload-${VERSION}.jar"
+echo "    Version: ${VERSION}  JAR: ${JAR_NAME}"
+
+# 3. Determine icon arg
 ICON_ARG=""
 if [ -f "package/linux/icon.png" ]; then
     ICON_ARG="--icon package/linux/icon.png"
 fi
 
-# 3. jpackage for each requested type
+# 4. jpackage for each requested type
 for TYPE in "${TYPES[@]}"; do
     echo "[2/N] Creating Linux .${TYPE} installer..."
     jpackage \
       --input target/libs \
-      --main-jar conload-1.0.1.jar \
+      --main-jar "${JAR_NAME}" \
       --main-class com.conload.App \
       --name conload \
-      --app-version 1.0.1 \
+      --app-version "${VERSION}" \
       --description "Download Confluence and Jira pages as Markdown for AI/Copilot context" \
       --vendor "conload" \
       --dest target/installer \

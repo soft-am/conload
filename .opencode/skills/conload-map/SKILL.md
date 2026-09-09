@@ -229,16 +229,23 @@ form, as does the standalone Cross Context section. The value flows:
 
 **Full Mode (opt-in — toggled on by the user):**
 - Recursion depth capped at `MAX_DEPTH_FULL` (= 3) — deep but bounded
-- Epic children are recursively expanded (full tree)
+- Epic children + sub-tasks fetched via JQL and recursively expanded
 - Related keys per issue capped at `MAX_RELATED_FULL` (= 10)
 - Phase E: top-word Confluence discovery runs (searches Confluence for words
   found in the main/epic issue titles)
 
 **Not-Full Mode (default):**
-- Recursion depth capped at `MAX_DEPTH_NON_FULL` (= 1) — only direct related issues, no grandchildren
-- Epics: summary-only (the `jira_<KEY>.md` is fetched + exported, but no child Jira issues are expanded)
+- Recursion depth capped at `MAX_DEPTH_NON_FULL` (= 1) — only direct related issues + children, no grandchildren
+- Epic children + sub-tasks fetched via JQL (`"Epic Link" = KEY` + `parent = KEY`) and expanded one level
 - Related keys per issue capped at `MAX_RELATED_NON_FULL` (= 10)
 - Phase E (top-word Confluence discovery) is **skipped entirely**
+
+**Child issue discovery (both modes):**
+`JiraKeyDiscoverer.childKeys(client, baseUrl, issueKey, maxResults)` queries Jira
+for child issues — Stories under an Epic (`"Epic Link" = KEY`) and sub-tasks
+(`parent = KEY`). The `subtasks` field on a Jira issue only lists sub-tasks, not
+Epic children (those point upward via `customfield_10014`), so this JQL query is
+required to discover them. Capped at `MAX_CHILD_ISSUES` (= 20).
 
 ### Global dedup (all modes)
 

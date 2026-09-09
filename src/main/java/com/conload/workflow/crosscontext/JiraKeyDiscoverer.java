@@ -114,6 +114,56 @@ final class JiraKeyDiscoverer {
         return new ArrayList<>(keys);
     }
 
+    // ── Child issues (Epic children + sub-tasks via JQL) ───────────────
+
+    /**
+     * Find child issues of a given key using JQL. This discovers:
+     * <ul>
+     *   <li>Stories under an Epic: {@code "Epic Link" = KEY}</li>
+     *   <li>Sub-tasks under a Story: {@code parent = KEY}</li>
+     * </ul>
+     * The {@code subtasks} field on a Jira issue only contains sub-tasks, not
+     * Epic children — Epic children point upward via {@code customfield_10014}.
+     * This method bridges that gap by querying Jira directly.
+     *
+     * @param client      Jira REST client
+     * @param baseUrl     e.g. https://site.atlassian.net
+     * @param issueKey    the parent/epic key to find children for
+     * @param maxResults  cap on returned issues
+     * @return deduplicated list of child issue keys (never {@code null})
+     */
+    List<String> childKeys(JiraClient client, String baseUrl, String issueKey, int maxResults) {
+        Set<String> keys = new LinkedHashSet<>();
+
+        try {
+            String jql = "\"Epic Link\" = " + issueKey;
+            callbacks.onProgress("Discover", "Searching Epic children for " + issueKey + "…");
+            for (JiraIssue issue : client.searchIssues(baseUrl, jql, maxResults)) {
+                if (issue.getKey() != null && !issue.getKey().isBlank()) keys.add(issue.getKey());
+            }
+        } catch (Exception e) {
+            if (callbacks.isHardStopped() || WorkflowCallbacks.isInterruptCause(e)) {
+                throw new WorkflowStoppedException(e);
+            }
+            callbacks.onError("Discover", "Epic children search failed for " + issueKey + ": " + e.getMessage());
+        }
+
+        try {
+            String jql = "parent = " + issueKey;
+            callbacks.onProgress("Discover", "Searching sub-tasks for " + issueKey + "…");
+            for (JiraIssue issue : client.searchIssues(baseUrl, jql, maxResults)) {
+                if (issue.getKey() != null && !issue.getKey().isBlank()) keys.add(issue.getKey());
+            }
+        } catch (Exception e) {
+            if (callbacks.isHardStopped() || WorkflowCallbacks.isInterruptCause(e)) {
+                throw new WorkflowStoppedException(e);
+            }
+            callbacks.onError("Discover", "Sub-task search failed for " + issueKey + ": " + e.getMessage());
+        }
+
+        return new ArrayList<>(keys);
+    }
+
     // ── Confluence page IDs from a Jira issue ───────────────────────────
 
     /**

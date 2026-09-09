@@ -18,19 +18,23 @@ echo ""
 # 1. Build JAR + deps
 echo "[1/3] Building JAR and copying dependencies..."
 mvn clean package -Pnative -DskipTests -q
-# 2. Determine icon arg
+# 2. Derive version + jar name from pom.xml
+VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout 2>/dev/null)
+JAR_NAME="conload-${VERSION}.jar"
+echo "    Version: ${VERSION}  JAR: ${JAR_NAME}"
+# 3. Determine icon arg
 ICON_ARG=""
 if [ -f "package/mac/icon.icns" ]; then
     ICON_ARG="--icon package/mac/icon.icns"
 fi
-# 3. jpackage
+# 4. jpackage
 echo "[2/3] Creating macOS .dmg installer..."
 jpackage \
   --input target/libs \
-  --main-jar conload-1.0.1.jar \
+  --main-jar "${JAR_NAME}" \
   --main-class com.conload.App \
   --name conload \
-  --app-version 1.0.1 \
+  --app-version "${VERSION}" \
   --description "Download Confluence and Jira pages as Markdown for AI/Copilot context" \
   --vendor "conload" \
   --dest target/installer \
@@ -41,5 +45,5 @@ jpackage \
   $ICON_ARG
 echo ""
 echo "[3/3] Done!"
-echo "Installer: target/installer/conload-1.0.1.dmg"
+echo "Installer: target/installer/conload-${VERSION}.dmg"
 echo ""

@@ -458,7 +458,6 @@ public final class CrossContextBuilder {
         downloadLinkedConfluence(issue, jiraDir);
         counts[2] += commitsAggregator.writeCommits(jiraDir, key, visitedCommits);
 
-        if (!fullMode && isEpic) return;
         int maxDepth = fullMode ? CrossContextLimits.MAX_DEPTH_FULL : CrossContextLimits.MAX_DEPTH_NON_FULL;
         if (depth >= maxDepth) return;
 
@@ -469,6 +468,10 @@ public final class CrossContextBuilder {
         Set<String> relatedKeys = new LinkedHashSet<>(JiraKeyDiscoverer.relatedKeys(issue));
         for (String rk : keyDiscoverer.fromDirectory(jiraDir)) {
             if (!rk.equals(key)) relatedKeys.add(rk);
+        }
+        for (String ck : keyDiscoverer.childKeys(jiraClient, baseUrl, key,
+                CrossContextLimits.MAX_CHILD_ISSUES)) {
+            if (!ck.equals(key)) relatedKeys.add(ck);
         }
         int maxRelated = fullMode ? CrossContextLimits.MAX_RELATED_FULL
                                   : CrossContextLimits.MAX_RELATED_NON_FULL;

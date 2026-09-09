@@ -34,7 +34,12 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM 2. jpackage is called by Maven profile — but add icon if present
+REM 2. Derive version + jar name from pom.xml
+for /f "tokens=*" %%v in ('mvn help:evaluate -Dexpression^=project.version -q -DforceStdout 2^>nul') do set VERSION=%%v
+set JAR_NAME=conload-%VERSION%.jar
+echo    Version: %VERSION%  JAR: %JAR_NAME%
+
+REM 3. jpackage is called by Maven profile — but add icon if present
 set ICON_ARG=
 if exist "package\windows\icon.ico" (
     set ICON_ARG=--icon package\windows\icon.ico
@@ -43,10 +48,10 @@ if exist "package\windows\icon.ico" (
 echo [2/3] Creating Windows installer...
 jpackage ^
   --input target\libs ^
-  --main-jar conload-1.0.1.jar ^
+  --main-jar "%JAR_NAME%" ^
   --main-class com.conload.App ^
   --name conload ^
-  --app-version 1.0.1 ^
+  --app-version "%VERSION%" ^
   --description "Download Confluence and Jira pages as Markdown for AI/Copilot context" ^
   --vendor "conload" ^
   --dest target\installer ^
@@ -66,6 +71,6 @@ if errorlevel 1 (
 
 echo.
 echo [3/3] Done!
-echo Installer: target\installer\conload-1.0.1.exe
+echo Installer: target\installer\conload-%VERSION%.exe
 echo.
 
