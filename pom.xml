@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.conload</groupId>
     <artifactId>conload</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
     <packaging>jar</packaging>
     <name>Copilot Context Loader</name>
     <description>A local context workspace for CLI-based AI agents. Download Confluence, Jira, and GitHub content as Markdown and run any CLI agent in an embedded terminal.</description>
