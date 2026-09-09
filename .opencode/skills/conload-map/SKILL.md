@@ -218,19 +218,23 @@ Both the "Prompt" and "Workflows" labels use `prompt-header-accent-icon` + `bold
 
 ### Full Mode vs Not-Full Mode
 
-Every workflow has a **Full Mode** toggle (CheckBox, default on) in its form.
-The value flows: `WorkflowFieldDefinition("fullMode", ..., toggle=true)` →
-`WorkflowFormBuilder` renders CheckBox → `inputs.get("fullMode")` in
+Every workflow has a **Full Mode** toggle (CheckBox, default **off**) in its
+form, as does the standalone Cross Context section. The value flows:
+`WorkflowFieldDefinition("fullMode", ..., toggle=true)` →
+`WorkflowFormBuilder` renders CheckBox (prefill `"fullMode"="false"` from
+`WorkflowInlineSection.onWorkflowSelected`) → `inputs.get("fullMode")` in
 `accumulate()` → passed as `boolean fullMode` to
 `CrossContextBuilder.createCrossContext(..., fullMode)`.
+`CrossContextSection.fullModeBox` also starts unchecked.
 
-**Full Mode (default):**
-- Unlimited recursion depth for related Jira issues
+**Full Mode (opt-in — toggled on by the user):**
+- Recursion depth capped at `MAX_DEPTH_FULL` (= 3) — deep but bounded
 - Epic children are recursively expanded (full tree)
+- Related keys per issue capped at `MAX_RELATED_FULL` (= 10)
 - Phase E: top-word Confluence discovery runs (searches Confluence for words
   found in the main/epic issue titles)
 
-**Not-Full Mode (toggle unchecked):**
+**Not-Full Mode (default):**
 - Recursion depth capped at `MAX_DEPTH_NON_FULL` (= 1) — only direct related issues, no grandchildren
 - Epics: summary-only (the `jira_<KEY>.md` is fetched + exported, but no child Jira issues are expanded)
 - Related keys per issue capped at `MAX_RELATED_NON_FULL` (= 10)

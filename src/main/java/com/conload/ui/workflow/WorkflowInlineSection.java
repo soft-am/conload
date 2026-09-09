@@ -189,6 +189,7 @@ public final class WorkflowInlineSection extends VBox {
         Map<String, String> prefill = new LinkedHashMap<>();
         String autoRepo = GitRemoteResolver.resolveOwnerRepo(host.workspacePath());
         prefill.put("githubOwnerRepo", autoRepo);
+        prefill.put("fullMode", "false");
 
         currentForm = WorkflowFormBuilder.build(selectedWorkflow.inputFields(), prefill);
         formContainer.getChildren().add(currentForm.container());

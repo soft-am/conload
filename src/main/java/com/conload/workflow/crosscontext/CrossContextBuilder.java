@@ -454,9 +454,11 @@ public final class CrossContextBuilder {
         for (String rk : keyDiscoverer.fromDirectory(jiraDir)) {
             if (!rk.equals(key)) relatedKeys.add(rk);
         }
-        if (!fullMode && relatedKeys.size() > CrossContextLimits.MAX_RELATED_NON_FULL) {
+        int maxRelated = fullMode ? CrossContextLimits.MAX_RELATED_FULL
+                                  : CrossContextLimits.MAX_RELATED_NON_FULL;
+        if (relatedKeys.size() > maxRelated) {
             relatedKeys = new LinkedHashSet<>(
-                    new ArrayList<>(relatedKeys).subList(0, CrossContextLimits.MAX_RELATED_NON_FULL));
+                    new ArrayList<>(relatedKeys).subList(0, maxRelated));
         }
 
         Path relatedDir = jiraDir.resolve("related_context");
