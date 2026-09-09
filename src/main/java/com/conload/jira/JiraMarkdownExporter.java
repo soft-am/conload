@@ -4,6 +4,8 @@ import com.conload.model.AppConfig;
 import com.conload.model.JiraIssue;
 import com.conload.model.JiraIssue.*;
 import com.conload.ui.Icons;
+import com.conload.workflow.WorkflowCallbacks;
+import com.conload.workflow.WorkflowStoppedException;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -65,6 +67,9 @@ public class JiraMarkdownExporter {
                     byte[] bytes = client.downloadAttachment(att.getContent());
                     Files.write(mediaDir.resolve(att.getFilename()), bytes);
                 } catch (Exception e) {
+                    if (WorkflowCallbacks.isInterruptCause(e)) {
+                        throw new WorkflowStoppedException(e);
+                    }
                     log.accept("[JIRA][WARN] Could not download " + att.getFilename() + ": " + e.getMessage());
                 }
             }

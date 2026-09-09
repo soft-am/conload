@@ -7,6 +7,7 @@ import com.conload.model.ConfluencePage;
 import com.conload.service.AttachmentDownloaderService;
 import com.conload.util.FileUtil;
 import com.conload.workflow.WorkflowCallbacks;
+import com.conload.workflow.WorkflowStoppedException;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -98,6 +99,9 @@ final class ConfluenceTreeWriter {
                 download(baseUrl, child.getId(), dir, childPrefix, visited, counter);
             }
         } catch (Exception e) {
+            if (callbacks.isHardStopped() || WorkflowCallbacks.isInterruptCause(e)) {
+                throw new WorkflowStoppedException(e);
+            }
             callbacks.onError("Confluence", "Failed page " + pageId + ": " + e.getMessage());
         }
     }

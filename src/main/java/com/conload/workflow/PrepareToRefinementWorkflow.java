@@ -6,6 +6,7 @@ import com.conload.util.FileUtil;
 import com.conload.workflow.crosscontext.CrossContextBuilder;
 import com.conload.workflow.crosscontext.CrossContextResult;
 import com.conload.workflow.crosscontext.CrossContextSource;
+import com.conload.workflow.WorkflowStoppedException;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -165,6 +166,9 @@ public final class PrepareToRefinementWorkflow implements Workflow {
                     for (var issue : issues) keys.add(issue.getKey());
                     callbacks.onLog("[JIRA] Keyword \"" + ji.value() + "\" → " + issues.size() + " issue(s)");
                 } catch (Exception e) {
+                    if (callbacks.isHardStopped() || WorkflowCallbacks.isInterruptCause(e)) {
+                        throw new WorkflowStoppedException(e);
+                    }
                     callbacks.onError("Jira", "Keyword search failed for \"" + ji.value() + "\": " + e.getMessage());
                 }
             }

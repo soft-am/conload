@@ -145,7 +145,7 @@ WorkflowInlineSection (VBox, injected between header row and textarea)
    ├─ workflowCombo     — populated from WorkflowRegistry.all()
    ├─ formContainer     — built by WorkflowFormBuilder from inputFields()
    ├─ gatherSection     — spinner + log + file-count summary
-   └─ actionRow         — Gather Context / Cancel buttons
+   └─ actionRow         — Gather / Enough / Stop buttons
         │
         │  Gather → selectedWorkflow.accumulate(env, inputs, callbacks)
         ▼
@@ -218,19 +218,23 @@ Both the "Prompt" and "Workflows" labels use `prompt-header-accent-icon` + `bold
 
 ### Full Mode vs Not-Full Mode
 
-Every workflow has a **Full Mode** toggle (CheckBox, default on) in its form.
-The value flows: `WorkflowFieldDefinition("fullMode", ..., toggle=true)` →
-`WorkflowFormBuilder` renders CheckBox → `inputs.get("fullMode")` in
+Every workflow has a **Full Mode** toggle (CheckBox, default **off**) in its
+form, as does the standalone Cross Context section. The value flows:
+`WorkflowFieldDefinition("fullMode", ..., toggle=true)` →
+`WorkflowFormBuilder` renders CheckBox (prefill `"fullMode"="false"` from
+`WorkflowInlineSection.onWorkflowSelected`) → `inputs.get("fullMode")` in
 `accumulate()` → passed as `boolean fullMode` to
 `CrossContextBuilder.createCrossContext(..., fullMode)`.
+`CrossContextSection.fullModeBox` also starts unchecked.
 
-**Full Mode (default):**
-- Unlimited recursion depth for related Jira issues
+**Full Mode (opt-in — toggled on by the user):**
+- Recursion depth capped at `MAX_DEPTH_FULL` (= 3) — deep but bounded
 - Epic children are recursively expanded (full tree)
+- Related keys per issue capped at `MAX_RELATED_FULL` (= 10)
 - Phase E: top-word Confluence discovery runs (searches Confluence for words
   found in the main/epic issue titles)
 
-**Not-Full Mode (toggle unchecked):**
+**Not-Full Mode (default):**
 - Recursion depth capped at `MAX_DEPTH_NON_FULL` (= 1) — only direct related issues, no grandchildren
 - Epics: summary-only (the `jira_<KEY>.md` is fetched + exported, but no child Jira issues are expanded)
 - Related keys per issue capped at `MAX_RELATED_NON_FULL` (= 10)
@@ -260,6 +264,48 @@ the context root recursively and counts:
 - Commits (`commits_*.json` files)
 
 Displayed as progress label: `✓ Gathered: 47 files, 5 Jira, 12 Confluence, 8 commits — prompt loaded below.`
+
+### Enough vs Stop (gather cancellation)
+
+Two buttons are shown during a cross-context gather (both in the inline
+workflow section and the standalone Cross Context search popup):
+
+| | Enough (soft stop) | Stop (hard stop) |
+|---|---|---|
+| Signal | `enoughRequested = true` | `hardStopped = true` + `thread.interrupt()` |
+| `isCancelled()` | `true` (breaks loop boundaries) | `true` |
+| `isHardStopped()` | **false** | **true** |
+| In-flight HTTP call | **completes naturally** | **interrupted → re-thrown → unwinds stack in ms** |
+| Phase F (hierarchy doc) | runs (on partial) | skipped (exception propagates) |
+| `accumulate()` returns | partial `WorkflowContext` | throws `WorkflowStoppedException` |
+| UI finalize | registers context + pushes prompt + "(partial — Enough)" | "Stopped", no finalize, partial files left on disk unregistered |
+
+**How Stop gets fast (was slow before):**
+`java.net.http.HttpClient.send()` IS interruptible — `task.cancel(true)` /
+`thread.interrupt()` causes it to throw `InterruptedException`. The problem
+was that ~10 broad `catch (Exception e)` blocks along the pipeline swallowed
+this interrupt, logged it as a recoverable error via `onError(...)`, and
+continued iterating. Now each HTTP-wrapping catch block checks
+`callbacks.isHardStopped() || WorkflowCallbacks.isInterruptCause(e)` and
+re-throws a `WorkflowStoppedException` (unchecked) so the entire stack
+unwinds in milliseconds instead of waiting for the next `isCancelled()` loop
+boundary.
+
+Key files:
+- `WorkflowCallbacks.isHardStopped()` — default `false`; `WorkflowStoppedException` — unchecked.
+- `WorkflowCallbacks.isInterruptCause(Throwable)` — static helper that checks the cause chain for `InterruptedException` / `InterruptedIOException`.
+- `WorkflowInlineSection` — Enough/Stop buttons, `gatherThread.interrupt()` on Stop, `onGatherFailed` handles `WorkflowStoppedException`.
+- `ContextDownloadController.startCrossContextGather` — Enough/Stop via `DownloadProgressPane`, callbacks with `isHardStopped()`, `failure()` handles `WorkflowStoppedException`.
+- `DownloadProgressPane` — Enough button (4th constructor arg `Runnable enough`), `showEnough(boolean)` / `setEnoughEnabled(boolean)`.
+
+Re-throw guards are in these catch blocks:
+- `ConfluenceTreeWriter.download` (page tree)
+- `CrossContextBuilder.exportJiraMd`, `resolveExtraConfluence`, `searchConfluenceForWord`, `normalizeGitHubPr`/`normalizeGitHubPrs` (PR fetch + commits)
+- `CommitsAggregator.writeCommits` (search + per-commit diff)
+- `JiraKeyDiscoverer.epicLinkKey`, `confluencePageIds` (remote links)
+- `JiraMarkdownExporter.fetchAndExport` (attachment download loop)
+- `PrepareToRefinementWorkflow.resolveJiraKeys` (JQL keyword search)
+- `ConfluenceReverseEngineeringWorkflow.resolvePageUrls` (CQL keyword search)
 
 ### Adding a new workflow (checklist)
 

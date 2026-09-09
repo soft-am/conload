@@ -92,7 +92,7 @@ public final class CrossContextSection {
         valueField.setPromptText(CrossSource.JIRA.prompt());
         HBox.setHgrow(valueField, Priority.ALWAYS);
 
-        fullModeBox.setSelected(true);
+        fullModeBox.setSelected(false);
         fullModeBox.setTooltip(new Tooltip("Deep recursion + epic children + word-frequency discovery"));
 
         gatherBtn.setGraphic(new CrossContextIcon(16));

@@ -12,6 +12,7 @@ import com.conload.workflow.WorkflowContext;
 import com.conload.workflow.WorkflowEnvironment;
 import com.conload.workflow.WorkflowInputs;
 import com.conload.workflow.WorkflowRegistry;
+import com.conload.workflow.WorkflowStoppedException;
 import com.conload.workflow.GitRemoteResolver;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -61,8 +62,11 @@ public final class WorkflowInlineSection extends VBox {
     private ProgressIndicator spinner;
     private VBox gatherSection;
     private Button gatherBtn;
-    private Button cancelBtn;
-    private volatile boolean gatheringCancelled = false;
+    private Button enoughBtn;
+    private Button stopBtn;
+    private volatile boolean enoughRequested = false;
+    private volatile boolean hardStopped = false;
+    private Thread gatherThread;
 
     /** Recoverable per-item errors collected during the current gather pass
      *  (API failures, download errors). Reset on each {@link #startGathering}. */
@@ -157,15 +161,29 @@ public final class WorkflowInlineSection extends VBox {
         gatherBtn.setDisable(true);
         gatherBtn.setOnAction(e -> startGathering());
 
-        cancelBtn = UiFactory.errorButton("Cancel");
-        cancelBtn.setDisable(true);
-        UiFactory.hide(cancelBtn);
-        cancelBtn.setOnAction(e -> {
-            gatheringCancelled = true;
-            cancelBtn.setDisable(true);
+        enoughBtn = UiFactory.actionButton("Enough");
+        enoughBtn.setDisable(true);
+        UiFactory.hide(enoughBtn);
+        enoughBtn.setTooltip(new Tooltip("Soft stop: finish the current in-flight request, "
+                + "then finalize with the results gathered so far (hierarchy doc + registered context)."));
+        enoughBtn.setOnAction(e -> {
+            enoughRequested = true;
+            enoughBtn.setDisable(true);
+            progressLabel.setText(Icons.WARNING + "  Finalizing — finishing current request…");
         });
 
-        HBox row = new HBox(8, gatherBtn, cancelBtn);
+        stopBtn = UiFactory.errorButton("Stop");
+        stopBtn.setDisable(true);
+        UiFactory.hide(stopBtn);
+        stopBtn.setTooltip(new Tooltip("Hard stop: interrupt the in-flight request immediately "
+                + "and discard partial results."));
+        stopBtn.setOnAction(e -> {
+            hardStopped = true;
+            stopBtn.setDisable(true);
+            if (gatherThread != null) gatherThread.interrupt();
+        });
+
+        HBox row = new HBox(8, gatherBtn, enoughBtn, stopBtn);
         row.setAlignment(Pos.CENTER_LEFT);
         return row;
     }
@@ -189,6 +207,7 @@ public final class WorkflowInlineSection extends VBox {
         Map<String, String> prefill = new LinkedHashMap<>();
         String autoRepo = GitRemoteResolver.resolveOwnerRepo(host.workspacePath());
         prefill.put("githubOwnerRepo", autoRepo);
+        prefill.put("fullMode", "false");
 
         currentForm = WorkflowFormBuilder.build(selectedWorkflow.inputFields(), prefill);
         formContainer.getChildren().add(currentForm.container());
@@ -214,10 +233,13 @@ public final class WorkflowInlineSection extends VBox {
         logArea.clear();
         UiFactory.show(gatherSection);
         gatherBtn.setDisable(true);
-        UiFactory.show(cancelBtn);
-        cancelBtn.setDisable(false);
+        UiFactory.show(enoughBtn);
+        enoughBtn.setDisable(false);
+        UiFactory.show(stopBtn);
+        stopBtn.setDisable(false);
         UiFactory.show(spinner);
-        gatheringCancelled = false;
+        enoughRequested = false;
+        hardStopped = false;
         gatherErrors.clear();
         progressLabel.getStyleClass().remove("workflow-progress-warning");
         host.showTaskBadge("workflow", "Gathering…", true, host.contextsDir().toFile());
@@ -242,11 +264,14 @@ public final class WorkflowInlineSection extends VBox {
                 Platform.runLater(() -> logArea.appendText(line + "\n"));
             }
             @Override public boolean isCancelled() {
-                return gatheringCancelled;
+                return enoughRequested || hardStopped;
+            }
+            @Override public boolean isHardStopped() {
+                return hardStopped;
             }
         };
 
-        Thread thread = Thread.ofVirtual().name("workflow-gather", 0).unstarted(() -> {
+        gatherThread = Thread.ofVirtual().name("workflow-gather", 0).unstarted(() -> {
             try {
                 WorkflowContext ctx = selectedWorkflow.accumulate(env, inputs, callbacks);
                 Platform.runLater(() -> onGatherComplete(ctx));
@@ -254,19 +279,22 @@ public final class WorkflowInlineSection extends VBox {
                 Platform.runLater(() -> onGatherFailed(t));
             }
         });
-        thread.setDaemon(true);
-        thread.start();
+        gatherThread.setDaemon(true);
+        gatherThread.start();
     }
 
     private void onGatherComplete(WorkflowContext ctx) {
         UiFactory.hide(spinner);
-        cancelBtn.setDisable(true);
-        UiFactory.hide(cancelBtn);
+        enoughBtn.setDisable(true);
+        UiFactory.hide(enoughBtn);
+        stopBtn.setDisable(true);
+        UiFactory.hide(stopBtn);
         gatherBtn.setDisable(false);
 
         String summary = countContextSummary(ctx.contextRoot().toFile());
         int errorCount = gatherErrors.size();
         int totalFiles = ctx.contextRoot().toFile().exists() ? countRawFiles(ctx.contextRoot().toFile()) : 0;
+        boolean partial = enoughRequested;
 
         writeWorkflowMetadata(ctx);
 
@@ -277,20 +305,20 @@ public final class WorkflowInlineSection extends VBox {
             host.registerContext(ctx.contextRoot().toAbsolutePath().toString());
         } catch (Exception ignored) { /* best-effort */ }
 
+        String partialTag = partial ? " (partial — Enough)" : "";
+
         if (errorCount > 0) {
             progressLabel.getStyleClass().add("workflow-progress-warning");
-            progressLabel.setText(Icons.WARNING + " Gathered: " + summary
+            progressLabel.setText(Icons.WARNING + " Gathered: " + summary + partialTag
                     + " — " + errorCount + " error(s) occurred; see log below.");
             host.hideTaskBadge("workflow");
-            // Keep the section + log visible so the user can read the errors.
         } else if (totalFiles == 0) {
             progressLabel.getStyleClass().add("workflow-progress-warning");
             progressLabel.setText(Icons.WARNING + " Gathered 0 files — nothing was downloaded; "
                     + "check inputs/credentials and the log below.");
             host.hideTaskBadge("workflow");
-            // Nothing useful was gathered; keep the section open.
         } else {
-            progressLabel.setText(Icons.CHECK + " Gathered: " + summary + " — prompt loaded below.");
+            progressLabel.setText(Icons.CHECK + " Gathered: " + summary + partialTag + " — prompt loaded below.");
             host.showTaskBadge("workflow", Icons.CHECK + " Cross-context ready", false, null);
             UiFactory.hide(this);
         }
@@ -357,10 +385,19 @@ public final class WorkflowInlineSection extends VBox {
 
     private void onGatherFailed(Throwable t) {
         UiFactory.hide(spinner);
-        cancelBtn.setDisable(true);
-        UiFactory.hide(cancelBtn);
+        enoughBtn.setDisable(true);
+        UiFactory.hide(enoughBtn);
+        stopBtn.setDisable(true);
+        UiFactory.hide(stopBtn);
         gatherBtn.setDisable(false);
         host.hideTaskBadge("workflow");
+
+        if (t instanceof WorkflowStoppedException) {
+            progressLabel.setText(Icons.STOP + " Stopped — partial files left on disk (unregistered).");
+            logArea.appendText("\n" + Icons.STOP + " Stopped by user.\n");
+            return;
+        }
+
         progressLabel.setText("✗ Failed: " + t.getMessage());
         logArea.appendText("\nERROR: " + t.getMessage() + "\n");
         for (StackTraceElement e : t.getStackTrace()) {

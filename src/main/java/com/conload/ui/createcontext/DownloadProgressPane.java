@@ -28,6 +28,7 @@ public final class DownloadProgressPane {
     private static final String LOG_TITLE = "  Progress logs";
     private final Button startButton;
     private final Button stopButton;
+    private final Button enoughButton;
     private final HBox buttonRow;
     private final ProgressIndicator spinner;
     private final ProgressBar progressBar = new ProgressBar(0);
@@ -44,6 +45,14 @@ public final class DownloadProgressPane {
     private int ellipsisIndex;
 
     public DownloadProgressPane(Runnable start, Runnable stop, BooleanSupplier hasResults) {
+        this(start, stop, hasResults, null);
+    }
+
+    /** Extended constructor with an optional {@code enough} callback. When
+     *  non-null, an "Enough" button is shown alongside Stop during running
+     *  state — it performs a soft stop (finish current request, finalize).
+     */
+    public DownloadProgressPane(Runnable start, Runnable stop, BooleanSupplier hasResults, Runnable enough) {
         this.hasResults = hasResults;
         spinner = new ProgressIndicator();
         spinner.setPrefSize(14, 14);
@@ -61,7 +70,21 @@ public final class DownloadProgressPane {
         stopButton = UiFactory.errorButton("Stop");
         stopButton.setDisable(true);
         stopButton.setOnAction(e -> stop.run());
+        if (enough != null) {
+            enoughButton = UiFactory.actionButton("Enough");
+            enoughButton.setDisable(true);
+            enoughButton.setTooltip(new javafx.scene.control.Tooltip(
+                    "Soft stop: finish the current in-flight request, then finalize with results gathered so far."));
+            enoughButton.setOnAction(e -> {
+                enoughButton.setDisable(true);
+                enough.run();
+            });
+            UiFactory.hide(enoughButton);
+        } else {
+            enoughButton = null;
+        }
         buttonRow = new HBox(6, startButton, stopButton);
+        if (enoughButton != null) buttonRow.getChildren().add(1, enoughButton);
         buttonRow.setAlignment(Pos.CENTER);
         UiFactory.hide(buttonRow);
         progressBar.setPrefWidth(Double.MAX_VALUE);
@@ -115,6 +138,7 @@ public final class DownloadProgressPane {
     public void setRunning(boolean running) {
         startButton.setDisable(running || !hasResults.getAsBoolean());
         stopButton.setDisable(!running);
+        if (enoughButton != null) enoughButton.setDisable(true);
         if (!running) progressBar.progressProperty().unbind();
         spinner.setVisible(running);
         if (running) {
@@ -122,6 +146,19 @@ public final class DownloadProgressPane {
             UiFactory.show(buttonRow);
             logPane.setExpanded(true);
         } else stopEllipsisAnimation();
+    }
+
+    /** Show/hide the Enough button (only for cross-context gather mode). */
+    public void showEnough(boolean show) {
+        if (enoughButton != null) {
+            enoughButton.setVisible(show);
+            enoughButton.setManaged(show);
+        }
+    }
+
+    /** Enable the Enough button during an active gather. */
+    public void setEnoughEnabled(boolean enabled) {
+        if (enoughButton != null) enoughButton.setDisable(!enabled);
     }
 
     public void updateSaveButtonState() {

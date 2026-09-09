@@ -8,6 +8,7 @@ import com.conload.workflow.crosscontext.CrossContextBuilder;
 import com.conload.workflow.crosscontext.CrossContextLimits;
 import com.conload.workflow.crosscontext.CrossContextResult;
 import com.conload.workflow.crosscontext.CrossContextSource;
+import com.conload.workflow.WorkflowStoppedException;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -173,6 +174,9 @@ public final class ConfluenceReverseEngineeringWorkflow implements Workflow {
             }
             callbacks.onLog("[CONF-REVERSE] Keyword \"" + ci.value() + "\" → " + urls.size() + " page(s)");
         } catch (Exception e) {
+            if (callbacks.isHardStopped() || WorkflowCallbacks.isInterruptCause(e)) {
+                throw new WorkflowStoppedException(e);
+            }
             callbacks.onError("Confluence", "Keyword search failed: " + e.getMessage());
         }
         return urls;

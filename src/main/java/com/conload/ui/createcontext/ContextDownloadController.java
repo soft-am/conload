@@ -18,6 +18,7 @@ import com.conload.workflow.WorkflowCallbacks;
 import com.conload.workflow.WorkflowContext;
 import com.conload.workflow.WorkflowEnvironment;
 import com.conload.workflow.WorkflowInputs;
+import com.conload.workflow.WorkflowStoppedException;
 import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -46,11 +47,12 @@ public final class ContextDownloadController {
     private TextField pathField;
     private DownloadProgressPane progressPane;
     private VBox inProgressView;
+    private volatile boolean enoughRequested = false;
 
     public ContextDownloadController(Host host) { this.host = host; }
 
     public DownloadProgressPane buildProgressPane() {
-        progressPane = new DownloadProgressPane(this::start, this::stop, host::hasVisibleResults);
+        progressPane = new DownloadProgressPane(this::start, this::stop, host::hasVisibleResults, this::enough);
         inProgressView = progressPane.inProgressView();
         return progressPane;
     }
@@ -158,7 +160,12 @@ public final class ContextDownloadController {
         ProjectFiles project = host.projectFiles(projectId);
         boolean restorePrompt = host.addContextTargetFolder() != null;
         host.cancelled().set(false);
+        enoughRequested = false;
         host.prepareDownload();
+        if (progressPane != null) {
+            progressPane.showEnough(true);
+            progressPane.setEnoughEnabled(true);
+        }
         Task<String> task = new Task<>() {
             @Override protected String call() throws Exception {
                 WorkflowEnvironment environment = new WorkflowEnvironment(host.config(), host.githubToken(),
@@ -176,6 +183,10 @@ public final class ContextDownloadController {
                     }
 
                     @Override public boolean isCancelled() {
+                        return enoughRequested || host.cancelled().get() || Thread.currentThread().isInterrupted();
+                    }
+
+                    @Override public boolean isHardStopped() {
                         return host.cancelled().get() || Thread.currentThread().isInterrupted();
                     }
                 };
@@ -185,16 +196,35 @@ public final class ContextDownloadController {
         };
         host.setCurrentTask(task);
         host.bindDownload(task);
-        task.setOnSucceeded(e -> success(task, projectId, project, restorePrompt, "Cross-context ready >"));
-        task.setOnFailed(e -> failure(task, project));
-        task.setOnCancelled(e -> cancelled(project));
+        task.setOnSucceeded(e -> {
+            hideEnough();
+            String completionText = enoughRequested
+                    ? "Cross-context ready (partial) >" : "Cross-context ready >";
+            success(task, projectId, project, restorePrompt, completionText);
+        });
+        task.setOnFailed(e -> { hideEnough(); failure(task, project); });
+        task.setOnCancelled(e -> { hideEnough(); cancelled(project); });
         host.closeSearchPopup();
         if (project != null) project.pane().showTaskBadge("download", "Gathering cross-context… >", true,
                 host.contextsDir().toFile());
         Thread.ofVirtual().name("cross-context", 0).start(task);
     }
 
+    /** Soft stop: finish current in-flight request, then finalize with partial results. */
+    public void enough() {
+        enoughRequested = true;
+        host.appendLog("[USER] Enough requested — finishing current request, then finalizing...");
+    }
+
+    private void hideEnough() {
+        if (progressPane != null) {
+            progressPane.showEnough(false);
+            progressPane.setEnoughEnabled(false);
+        }
+    }
+
     public void stop() {
+        hideEnough();
         host.cancelled().set(true);
         Task<?> task = host.currentTask();
         if (task != null) task.cancel(true);
@@ -261,8 +291,15 @@ public final class ContextDownloadController {
         else showCompletion(Icons.CHECK, completionText, path == null ? null : "New context folder: " + path, "success");
     }
     private void failure(Task<String> task, ProjectFiles project) {
-        if (project != null) project.pane().showTaskBadge("download", "✗ Download failed", false, null);
         Throwable error = task.getException();
+        if (error instanceof WorkflowStoppedException) {
+            if (project != null) project.pane().showTaskBadge("download", Icons.STOP + " Stopped", false, null);
+            host.setDownloadState(false);
+            host.setStatus(Icons.STOP + " Stopped by user.", "warning");
+            showCompletion(Icons.STOP, "Stopped", "The gather was stopped by the user. Partial files remain on disk (unregistered).", "warning");
+            return;
+        }
+        if (project != null) project.pane().showTaskBadge("download", "✗ Download failed", false, null);
         String detail = error != null && error.getMessage() != null ? error.getMessage() : "Unknown error";
         host.setDownloadState(false); host.setStatus("✗ Download failed: " + detail, "error"); host.appendLog("[ERROR] " + detail);
         if (error != null) error.printStackTrace();

@@ -12,6 +12,7 @@ import com.conload.service.search.SourceInputClassifier;
 import com.conload.util.FileUtil;
 import com.conload.workflow.WorkflowCallbacks;
 import com.conload.workflow.WorkflowEnvironment;
+import com.conload.workflow.WorkflowStoppedException;
 
 import java.io.File;
 import java.io.IOException;
@@ -267,6 +268,9 @@ public final class CrossContextBuilder {
             }
             callbacks.onLog("[CROSS] Keyword \"" + ci.value() + "\" → " + pageIds.size() + " Confluence page(s)");
         } catch (Exception e) {
+            if (callbacks.isHardStopped() || WorkflowCallbacks.isInterruptCause(e)) {
+                throw new WorkflowStoppedException(e);
+            }
             callbacks.onError("Confluence", "Keyword search failed: " + e.getMessage());
         }
         return pageIds;
@@ -297,6 +301,9 @@ public final class CrossContextBuilder {
         try {
             pullRequest = ghClient.getPullRequest(owner, repo, pr.prNumber());
         } catch (Exception e) {
+            if (callbacks.isHardStopped() || WorkflowCallbacks.isInterruptCause(e)) {
+                throw new WorkflowStoppedException(e);
+            }
             callbacks.onError("GitHub", "PR fetch failed: " + e.getMessage());
             return new NormalizeResult(List.of(), List.of());
         }
@@ -314,6 +321,9 @@ public final class CrossContextBuilder {
                 commitMessages.add(c.message() != null ? c.message() : "");
             }
         } catch (Exception e) {
+            if (callbacks.isHardStopped() || WorkflowCallbacks.isInterruptCause(e)) {
+                throw new WorkflowStoppedException(e);
+            }
             callbacks.onError("GitHub", "PR commits fetch failed: " + e.getMessage());
         }
 
@@ -357,6 +367,9 @@ public final class CrossContextBuilder {
                 callbacks.onProgress("GitHub", "Fetching PR #" + pr.prNumber() + " from " + pr.ownerRepo() + "…");
                 pullRequest = ghClient.getPullRequest(owner, repo, pr.prNumber());
             } catch (Exception e) {
+                if (callbacks.isHardStopped() || WorkflowCallbacks.isInterruptCause(e)) {
+                    throw new WorkflowStoppedException(e);
+                }
                 callbacks.onError("GitHub", "PR #" + pr.prNumber() + " fetch failed: " + e.getMessage());
                 continue;
             }
@@ -372,6 +385,9 @@ public final class CrossContextBuilder {
                     commitMessages.add(c.message() != null ? c.message() : "");
                 }
             } catch (Exception e) {
+                if (callbacks.isHardStopped() || WorkflowCallbacks.isInterruptCause(e)) {
+                    throw new WorkflowStoppedException(e);
+                }
                 callbacks.onError("GitHub", "PR #" + pr.prNumber() + " commits fetch failed: " + e.getMessage());
             }
 
@@ -454,9 +470,11 @@ public final class CrossContextBuilder {
         for (String rk : keyDiscoverer.fromDirectory(jiraDir)) {
             if (!rk.equals(key)) relatedKeys.add(rk);
         }
-        if (!fullMode && relatedKeys.size() > CrossContextLimits.MAX_RELATED_NON_FULL) {
+        int maxRelated = fullMode ? CrossContextLimits.MAX_RELATED_FULL
+                                  : CrossContextLimits.MAX_RELATED_NON_FULL;
+        if (relatedKeys.size() > maxRelated) {
             relatedKeys = new LinkedHashSet<>(
-                    new ArrayList<>(relatedKeys).subList(0, CrossContextLimits.MAX_RELATED_NON_FULL));
+                    new ArrayList<>(relatedKeys).subList(0, maxRelated));
         }
 
         Path relatedDir = jiraDir.resolve("related_context");
@@ -475,6 +493,9 @@ public final class CrossContextBuilder {
             renameJiraMd(jiraDir, key);
             return issue;
         } catch (Exception e) {
+            if (callbacks.isHardStopped() || WorkflowCallbacks.isInterruptCause(e)) {
+                throw new WorkflowStoppedException(e);
+            }
             callbacks.onError("Jira", "Failed to fetch " + key + ": " + e.getMessage());
             return null;
         }
@@ -533,6 +554,9 @@ public final class CrossContextBuilder {
                 confluenceWriter.download(baseUrl, page.getId(), oftenDir, "", visitedConf, counts);
             }
         } catch (Exception e) {
+            if (callbacks.isHardStopped() || WorkflowCallbacks.isInterruptCause(e)) {
+                throw new WorkflowStoppedException(e);
+            }
             callbacks.onError("Confluence", "Search failed for \"" + word + "\": " + e.getMessage());
         }
     }

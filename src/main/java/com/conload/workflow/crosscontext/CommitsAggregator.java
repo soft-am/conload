@@ -5,6 +5,7 @@ import com.conload.github.GitHubClient.GitCommit;
 import com.conload.util.FileUtil;
 import com.conload.util.Json;
 import com.conload.workflow.WorkflowCallbacks;
+import com.conload.workflow.WorkflowStoppedException;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -62,6 +63,9 @@ final class CommitsAggregator {
             callbacks.onProgress("GitHub", "Searching commits for " + jiraKey + "…");
             commits = client.searchCommits(owner, repo, jiraKey);
         } catch (Exception e) {
+            if (callbacks.isHardStopped() || WorkflowCallbacks.isInterruptCause(e)) {
+                throw new WorkflowStoppedException(e);
+            }
             callbacks.onError("GitHub", "Commits search failed for " + jiraKey + ": " + e.getMessage());
             return 0;
         }
@@ -77,6 +81,9 @@ final class CommitsAggregator {
             try {
                 diff = client.getCommitDiff(owner, repo, commit.sha());
             } catch (Exception e) {
+                if (callbacks.isHardStopped() || WorkflowCallbacks.isInterruptCause(e)) {
+                    throw new WorkflowStoppedException(e);
+                }
                 callbacks.onError("GitHub", "Diff fetch failed for " + commit.shortSha() + ": " + e.getMessage());
             }
             var obj = Json.MAPPER.createObjectNode();

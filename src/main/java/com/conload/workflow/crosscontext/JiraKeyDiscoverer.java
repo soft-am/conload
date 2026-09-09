@@ -6,6 +6,7 @@ import com.conload.model.JiraIssue;
 import com.conload.model.JiraIssue.IssueLink;
 import com.conload.model.JiraIssue.IssueLink.LinkedIssue;
 import com.conload.workflow.WorkflowCallbacks;
+import com.conload.workflow.WorkflowStoppedException;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.io.IOException;
@@ -84,6 +85,9 @@ final class JiraKeyDiscoverer {
             String epic = client.getEpicLinkKey(baseUrl, issueKey);
             if (epic != null && !epic.isBlank()) return epic;
         } catch (Exception e) {
+            if (callbacks.isHardStopped() || WorkflowCallbacks.isInterruptCause(e)) {
+                throw new WorkflowStoppedException(e);
+            }
             callbacks.onError("Discover", "Epic link fetch failed for " + issueKey + ": " + e.getMessage());
         }
         return "";
@@ -130,6 +134,9 @@ final class JiraKeyDiscoverer {
                 if (pid != null) pageIds.add(pid);
             }
         } catch (Exception e) {
+            if (callbacks.isHardStopped() || WorkflowCallbacks.isInterruptCause(e)) {
+                throw new WorkflowStoppedException(e);
+            }
             callbacks.onError("Discover", "Remote links failed for " + key + ": " + e.getMessage());
         }
 
